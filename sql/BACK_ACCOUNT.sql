@@ -1,0 +1,27 @@
+/* Formatted on 7/30/2019 4:36:05 PM (QP5 v5.227.12220.39754) */
+  SELECT ACNTS_BRN_CODE "Brcode",
+         ACNTS_GLACC_CODE "GL Head",
+         ACNTS_AC_TYPE "AcType",
+         ACNTS_AC_SUB_TYPE "AcSubType",
+         ACNTS_PROD_CODE "Product Code",
+         COUNT (AC_NO) "NO of Account",
+         GLBALH_ASON_DATE "Date",
+         SUM (GLBALH_BC_BAL) "Amount"
+    FROM RIT_ACC,
+         IACLINK,
+         ACNTS,
+         GLBALASONHIST
+   WHERE     ACNTS_ENTITY_NUM = 1
+         AND ACNTS_INTERNAL_ACNUM = IACLINK_INTERNAL_ACNUM
+         and IACLINK_ENTITY_NUM=1
+         AND AC_NO = IACLINK_ACTUAL_ACNUM
+         AND GLBALH_BRN_CODE = ACNTS_BRN_CODE
+         AND GLBALH_ENTITY_NUM = 1
+         AND GLBALH_GLACC_CODE = ACNTS_GLACC_CODE
+         AND GLBALH_ASON_DATE = '29-jul-2019'
+GROUP BY ACNTS_BRN_CODE,
+         ACNTS_GLACC_CODE,
+         ACNTS_AC_TYPE,
+         ACNTS_AC_SUB_TYPE,
+         ACNTS_PROD_CODE,
+         GLBALH_ASON_DATE

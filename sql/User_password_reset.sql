@@ -1,0 +1,8 @@
+/* Formatted on 7/6/2023 12:49:48 PM (QP5 v5.388) */
+  SELECT USER_ID,
+         USER_NAME,
+         TRUNC (PWRESET_RESET_ON)     PWRESET_RESET_ON,
+         COUNT (*)                    nof_reset
+    FROM PWRESET, users
+   WHERE PWRESET_USER_ID = USER_ID
+GROUP BY USER_ID, USER_NAME, TRUNC (PWRESET_RESET_ON)

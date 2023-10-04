@@ -1,0 +1,480 @@
+/* Formatted on 29/12/2020 5:39:40 PM (QP5 v5.227.12220.39754) */
+---List of loan accounts of which Interest Applied and ED deducted in Non Int. bearing Block Loan Account.
+
+SELECT ACNTS_BRN_CODE,
+       FACNO (1, ACNTS_INTERNAL_ACNUM) ACCOUNT_NO,
+       ACNTS_PROD_CODE,
+       ACNTS_AC_TYPE,
+       ACNTEXCAMT_EXCISE_AMT CHARGE_AMT,
+       FN_GET_ASON_ACBAL (1,
+                          ACNTS_INTERNAL_ACNUM,
+                          'BDT',
+                          '31-DEC-2020',
+                          '31-DEC-2020')
+          ACNTBALNC
+  FROM ACNTEXCISEAMT, ACNTS
+ WHERE     ACNTEXCAMT_PROCESS_DATE = '31-dec-2020'
+       AND ACNTEXCAMT_INTERNAL_ACNUM = ACNTS_INTERNAL_ACNUM
+       AND ACNTS_ENTITY_NUM = 1
+       AND ACNTS_CLOSURE_DATE IS NULL
+       AND ACNTEXCAMT_EXCISE_AMT <> 0
+       AND ACNTS_PROD_CODE IN (2318,2403,2407,2410,2203,2207,2214);
+       
+
+ -----List of Loan accounts of which ED not deducted
+
+SELECT ACNTS_BRN_CODE,
+       FACNO (1, ACNTS_INTERNAL_ACNUM) ACCOUNT_NO,
+       ACNTS_AC_TYPE,
+       ACNTS_PROD_CODE,
+       PRODUCT_NAME,
+       CHARGE_AMT,
+       ACNTBALNC
+  FROM (SELECT ACNTS_BRN_CODE,
+               ACNTS_INTERNAL_ACNUM,
+               ACNTS_AC_TYPE,
+               ACNTS_PROD_CODE,
+               PRODUCT_NAME,
+               ACNTEXCAMT_EXCISE_AMT CHARGE_AMT,
+               ABS (FN_GET_ASON_ACBAL (1,
+                                       ACNTS_INTERNAL_ACNUM,
+                                       'BDT',
+                                       '31-DEC-2020',
+                                       '31-DEC-2020'))
+                  ACNTBALNC
+          FROM PRODUCTS, ACNTS
+         WHERE     ACNTS_ENTITY_NUM = 1
+               AND ACNTS_CLOSURE_DATE IS NULL
+               AND ACNTS_PROD_CODE = PRODUCT_CODE
+               AND PRODUCT_FOR_LOANS = 1)
+ WHERE     ACNTBALNC >= 100000
+       AND ACNTS_INTERNAL_ACNUM NOT IN
+              (SELECT ACNTEXCAMT_INTERNAL_ACNUM
+                 FROM ACNTEXCISEAMT
+                WHERE     ACNTEXCAMT_PROCESS_DATE = '31-dec-2020'
+                      AND ACNTEXCAMT_EXCISE_AMT <> 0);
+
+--List of accounts of which ATM charge deducted but VAT not deducted.
+
+SELECT ATM_CHG_REC_BRN_CODE,
+       FACNO (1, ACNTS_INTERNAL_ACNUM) ACCOUNT_NO,
+       ACNTS_AC_NAME1 || ACNTS_AC_NAME2 ACCOUNT_NAME,
+       ACNTS_PROD_CODE
+  FROM ATM_CHG_REC, ACNTS
+ WHERE     ATM_CHG_REC_ENTITY_NUM = 1
+       AND ATM_CHG_REC_FIN_YEAR = 2020
+       AND NVL (ATM_CHG_REC_VAT_AMT, 0) <= 0
+       AND ATM_CHG_REC_INTERNAL_ACNUM = ACNTS_INTERNAL_ACNUM
+       AND ACNTS_ENTITY_NUM = 1;
+
+
+---List of accounts from which ATM service is on but charge not deducted
+
+SELECT ACNTS_BRN_CODE,
+       FACNO (1, ACNTS_INTERNAL_ACNUM) ACCOUNT_NO,
+       ACNTS_AC_NAME1 || ACNTS_AC_NAME2 ACCOUNT_NAME,
+       ACNTS_PROD_CODE
+  FROM CIFREG, ACNTS
+ WHERE     CIFREG_ACC_NUM = ACNTS_INTERNAL_ACNUM
+       AND ACNTS_ENTITY_NUM = 1
+       AND ACNTS_CLOSURE_DATE IS NULL
+       AND CIFREG_REJ_BY IS NULL
+       AND CIFREG_ACC_NUM NOT IN
+              (SELECT ATM_CHG_REC_INTERNAL_ACNUM
+                 FROM ATM_CHG_REC
+                WHERE     ATM_CHG_REC_ENTITY_NUM = 1
+                      AND ATM_CHG_REC_FIN_YEAR = 2020
+                      AND NVL (ATM_CHG_REC_CHARGE_AMT, 0) > 0);
+
+
+---List of account of which Pust Pull service charge deducted but VAT not deducted
+
+SELECT ACNTS_BRN_CODE,
+       FACNO (1, ACNTS_INTERNAL_ACNUM) ACCOUNT_NO,
+       ACNTS_AC_NAME1 || ACNTS_AC_NAME2 ACCOUNT_NAME,
+       ACNTS_PROD_CODE
+  FROM SMSCHARGE, ACNTS
+ WHERE     SMSCHARGE_ENTITY_NUM = 1
+       AND SMSCHARGE_FIN_YEAR = 2020
+       --AND SMSCHARGE_CHARGE_AMT <= 0
+       AND SMSCHARGE_VAT_AMT <= 0
+       AND ACNTS_ENTITY_NUM = 1
+       AND ACNTS_INTERNAL_ACNUM = SMSCHARGE_INTERNAL_ACNUM
+       AND SMSCHARGE_SERVICE_TYPE = 2;
+
+---List of account of which transaction alert service charge deducted but VAT not deducted
+
+SELECT ACNTS_BRN_CODE,
+       FACNO (1, ACNTS_INTERNAL_ACNUM) ACCOUNT_NO,
+       ACNTS_AC_NAME1 || ACNTS_AC_NAME2 ACCOUNT_NAME,
+       ACNTS_PROD_CODE
+  FROM SMSCHARGE, ACNTS
+ WHERE     SMSCHARGE_ENTITY_NUM = 1
+       AND SMSCHARGE_FIN_YEAR = 2020
+       --AND SMSCHARGE_CHARGE_AMT <= 0
+       AND SMSCHARGE_VAT_AMT <= 0
+       AND ACNTS_ENTITY_NUM = 1
+       AND ACNTS_INTERNAL_ACNUM = SMSCHARGE_INTERNAL_ACNUM
+       AND SMSCHARGE_SERVICE_TYPE = 1;
+
+
+--List of accounts which are registered for Push Pull service but Push Pul charge not deducted from the account
+
+SELECT ACNTS_BRN_CODE,
+       FACNO (1, ACNTS_INTERNAL_ACNUM) ACCOUNT_NO,
+       ACNTS_AC_NAME1 || ACNTS_AC_NAME2 ACCOUNT_NAME,
+       ACNTS_PROD_CODE
+  FROM MOBILEREG, ACNTS
+ WHERE     INT_ACNUM = ACNTS_INTERNAL_ACNUM
+       AND ACNTS_ENTITY_NUM = 1
+       AND ACNTS_CLOSURE_DATE IS NULL
+       AND SERVICE2 = 1
+       AND INT_ACNUM NOT IN
+              (SELECT SMSCHARGE_INTERNAL_ACNUM
+                 FROM SMSCHARGE
+                WHERE     SMSCHARGE_ENTITY_NUM = 1
+                      AND SMSCHARGE_SERVICE_TYPE = 2
+                      AND SMSCHARGE_FIN_YEAR = 2020
+                      AND SMSCHARGE_CHARGE_AMT > 0);
+
+
+----List of accounts which are registered for SMSS service but SMS charge not deducted from the account
+
+SELECT ACNTS_BRN_CODE,
+       FACNO (1, ACNTS_INTERNAL_ACNUM) ACCOUNT_NO,
+       ACNTS_AC_NAME1 || ACNTS_AC_NAME2 ACCOUNT_NAME,
+       ACNTS_PROD_CODE
+  FROM MOBILEREG, ACNTS
+ WHERE     INT_ACNUM = ACNTS_INTERNAL_ACNUM
+       AND ACNTS_ENTITY_NUM = 1
+       AND ACNTS_CLOSURE_DATE IS NULL
+       AND SERVICE1 = 1
+       AND INT_ACNUM NOT IN
+              (SELECT SMSCHARGE_INTERNAL_ACNUM
+                 FROM SMSCHARGE
+                WHERE     SMSCHARGE_ENTITY_NUM = 1
+                      AND SMSCHARGE_SERVICE_TYPE = 1
+                      AND SMSCHARGE_FIN_YEAR = 2020
+                      AND SMSCHARGE_CHARGE_AMT > 0);
+
+A
+--------SMS CHARGE DEUDUCT ON SUSSITY ACCOUNTS
+
+SELECT ACNTS_BRN_CODE,
+       FACNO (1, ACNTS_INTERNAL_ACNUM) ACCOUNT_NO,
+       ACNTS_AC_NAME1 || ACNTS_AC_NAME2 ACCOUNT_NAME,
+       ACNTS_AC_TYPE,
+       ACNTS_PROD_CODE,
+       CASE
+          WHEN SMSCHARGE_SERVICE_TYPE = '1' THEN 'SMS CHARGE'
+          ELSE 'PUSH PULL CHARGE'
+       END
+          CHARGE_TYPE,
+       SMSCHARGE_CHARGE_AMT
+  FROM SMSCHARGE, ACNTS
+ WHERE     SMSCHARGE_ENTITY_NUM = 1
+       AND SMSCHARGE_FIN_YEAR = 2020
+       AND SMSCHARGE_CHARGE_AMT <> 0
+       AND ACNTS_AC_TYPE = 'SBSS'
+       AND SMSCHARGE_PROCESS_DATE = '31-dec-2020'
+       AND ACNTS_ENTITY_NUM = 1
+       AND ACNTS_INTERNAL_ACNUM = SMSCHARGE_INTERNAL_ACNUM
+       AND SMSCHARGE_SERVICE_TYPE IN (1, 2);
+
+
+---List of Deposit running accounts of which no interest credited.
+
+SELECT ACNTS_BRN_CODE,
+       FACNO (1, ACNTS_INTERNAL_ACNUM) ACCOUNT_NO,
+       ACNTS_AC_NAME1 || ACNTS_AC_NAME2 ACCOUNT_NAME,
+       ACNTS_PROD_CODE
+  FROM ACNTS
+ WHERE     ACNTS_ENTITY_NUM = 1
+       AND ACNTS_PROD_CODE = 1020
+       AND ACNTS_CLOSURE_DATE IS NULL
+       AND ACNTS_INTERNAL_ACNUM;
+
+ ----SMS AND PUSH PULL CHARGE DEDUCTION BRANCH WISE
+
+  SELECT SMSCHARGE_BRN_CODE, CHARGE_TYPE, SUM (SMSCHARGE_CHARGE_AMT) CHARGE_AMT
+    FROM (SELECT SMSCHARGE_BRN_CODE,
+                 SMSCHARGE_CHARGE_AMT,
+                 CASE
+                    WHEN SMSCHARGE_SERVICE_TYPE = '1' THEN 'SMS Charge'
+                    ELSE 'PUSH PULL'
+                 END
+                    CHARGE_TYPE
+            FROM SMSCHARGE@DR3
+           WHERE     SMSCHARGE_ENTITY_NUM = 1
+                 AND SMSCHARGE_FIN_YEAR = 2020
+                 AND SMSCHARGE_CHARGE_AMT > 0)
+GROUP BY SMSCHARGE_BRN_CODE, CHARGE_TYPE;
+
+
+---RUNNING ACCOUNT INTEREST DEDITED
+---11
+SELECT ACNTS_BRN_CODE,
+       ACNTS_PROD_CODE,
+       ACNTS_AC_TYPE,
+       FACNO (1, ACNTS_INTERNAL_ACNUM) ACCOUNT_NO,
+       ACNTS_AC_NAME1 || ACNTS_AC_NAME2 ACCOUNT_NAME,
+       TRAN_AMOUNT,
+       FN_GET_ASON_ACBAL (1,
+                              ACNTS_INTERNAL_ACNUM,
+                              'BDT',
+                              '31-DEC-2021',
+                              '31-DEC-2021')
+          ACNTBAL,TRAN_DB_CR_FLG,TRAN_INTERNAL_ACNUM, TRAN_GLACC_CODE,TRAN_NARR_DTL1
+  FROM PRODUCTS,
+       ACNTS,
+       TRAN2020,
+       TRANBAT2020
+ WHERE     TRANBAT_ENTITY_NUM = 1
+       AND TRAN_ENTITY_NUM = 1
+       AND TRAN_DATE_OF_TRAN = TRANBAT_DATE_OF_TRAN
+       AND TRAN_BRN_CODE = TRANBAT_BRN_CODE
+       AND TRAN_BATCH_NUMBER = TRANBAT_BATCH_NUMBER
+      -- AND TRAN_BRN_CODE = 34116
+       AND TRANBAT_DATE_OF_TRAN = '31-DEC-2021'
+       AND TRANBAT_NARR_DTL1 = 'Running A/c Interest Settlement'
+       AND TRAN_DB_CR_FLG = 'D'
+       AND ACNTS_INTERNAL_ACNUM = TRAN_INTERNAL_ACNUM
+       AND ACNTS_PROD_CODE = PRODUCT_CODE
+       AND PRODUCT_FOR_DEPOSITS = 1
+       AND TRAN_NARR_DTL1 is null -- <>'TDS Deduction on Interest Amount'
+       AND PRODUCT_FOR_RUN_ACS = 1
+       AND TRAN_INTERNAL_ACNUM <>0;
+---RUNNING ACCOUNT INTEREST APPLY 5OK MORE
+
+SELECT ACNTS_BRN_CODE,
+       ACNTS_PROD_CODE,
+       ACNTS_AC_TYPE,
+       FACNO (1, ACNTS_INTERNAL_ACNUM) ACCOUNT_NO,
+       ACNTS_AC_NAME1 || ACNTS_AC_NAME2 ACCOUNT_NAME,
+       TRAN_AMOUNT INTEREST_AMOUNT,
+       FN_GET_ASON_ACBAL@DR3 (1,
+                              ACNTS_INTERNAL_ACNUM,
+                              'BDT',
+                              '31-DEC-2020',
+                              '31-DEC-2020')
+          ACNTBAL
+  FROM PRODUCTS@DR3,
+       ACNTS@DR3,
+       TRAN2020@DR3,
+       TRANBAT2020@DR3
+ WHERE     TRANBAT_ENTITY_NUM = 1
+       AND TRAN_ENTITY_NUM = 1
+       AND TRAN_DATE_OF_TRAN = TRANBAT_DATE_OF_TRAN
+       AND TRAN_BRN_CODE = TRANBAT_BRN_CODE
+       AND TRAN_BATCH_NUMBER = TRANBAT_BATCH_NUMBER
+       AND ACNTS_BRN_CODE = 26
+       AND TRANBAT_DATE_OF_TRAN = '31-DEC-2020'
+       AND TRANBAT_NARR_DTL1 = 'Running A/c Interest Settlement'
+       AND TRAN_DB_CR_FLG = 'C'
+       AND TRAN_AMOUNT >= 50000
+       AND ACNTS_INTERNAL_ACNUM = TRAN_INTERNAL_ACNUM
+       AND ACNTS_PROD_CODE = PRODUCT_CODE
+       AND PRODUCT_FOR_DEPOSITS = 1
+       AND PRODUCT_FOR_RUN_ACS = 1
+       AND TRAN_INTERNAL_ACNUM <> 0;
+
+--RUNNING ACCOUNT AMC NOT DEDUCT
+
+SELECT ACNTS_INTERNAL_ACNUM,
+       FACNO (1, ACNTS_INTERNAL_ACNUM) ACCOUNT_NUMBER,
+       ACNTS_AC_NAME1 || ACNTS_AC_NAME2 ACCOUNT_NAME,
+       ACNTS_PROD_CODE PRODUCT_CODE,
+       PRODUCT_NAME PRODUCT_NAME,
+       ACNTS_AC_TYPE,
+       ACNTS_AC_SUB_TYPE,
+       --LNACIR_APPL_INT_RATE Account_level_interest_rate,
+       --LNPRODIR_APPL_INT_RATE Product_level_interest_rate
+       FN_GET_ASON_ACBAL (1,
+                          ACNTS_INTERNAL_ACNUM,
+                          'BDT',
+                          '31-DEC-2020',
+                          '31-DEC-2020')
+          ACCOUNT_OS_BALANCE
+  FROM ACNTS, PRODUCTS
+ WHERE     ACNTS_ENTITY_NUM = 1
+       AND ACNTS_PROD_CODE = PRODUCT_CODE
+       AND PRODUCT_FOR_DEPOSITS = 1
+       AND PRODUCT_FOR_RUN_ACS = 1
+       AND (   ACNTS_INTERNAL_ACNUM NOT IN
+                  (SELECT CLCHGWAIVDT_INTERNAL_ACNUM
+                     FROM CLCHGWAIVEDTL, CLCHGWAIVEDTLHIST
+                    WHERE     CLCHGWAIVDTHIST_CLIENT_NUM =
+                                 CLCHGWAIVDT_CLIENT_NUM
+                          AND CLCHGWAIVDT_CHARGE_CODE = 'SBM'
+                          AND CLCHGWAIVDT_INTERNAL_ACNUM =
+                                 CLCHGWAIVDTHIST_INT_ACNUM)
+            OR ACNTS_CLIENT_NUM NOT IN
+                  (SELECT CLCHGWAIVDT_CLIENT_NUM
+                     FROM CLCHGWAIVEDTL, CLCHGWAIVEDTLHIST
+                    WHERE     CLCHGWAIVDTHIST_CLIENT_NUM =
+                                 CLCHGWAIVDT_CLIENT_NUM
+                          AND CLCHGWAIVDT_CHARGE_CODE = 'SBM'
+                          AND CLCHGWAIVDT_INTERNAL_ACNUM =
+                                 CLCHGWAIVDTHIST_INT_ACNUM))
+       AND ACNTS_INTERNAL_ACNUM NOT IN
+              (SELECT ACNTCHGAMT_INTERNAL_ACNUM
+                 FROM ACNTCHARGEAMT
+                WHERE     ACNTCHGAMT_ENTITY_NUM = 1
+                      AND ACNTCHGAMT_FIN_YEAR = 2020
+                      AND ACNTCHGAMT_PROCESS_DATE = '31-DEC-2020');
+
+
+
+SELECT ACNTS_BRN_CODE,
+       ACNTS_PROD_CODE,
+       ACNTS_AC_TYPE,
+       FACNO (1, ACNTS_INTERNAL_ACNUM) ACCOUNT_NO,
+       ACNTS_AC_NAME1 || ACNTS_AC_NAME2 ACCOUNT_NAME,
+       FN_GET_ASON_ACBAL@DR3 (1,
+                              ACNTS_INTERNAL_ACNUM,
+                              'BDT',
+                              '31-DEC-2020',
+                              '31-DEC-2020')
+          ACNTBAL
+  FROM PRODUCTS, ACNTS
+ WHERE     ACNTS_BRN_CODE = 26
+       AND ACNTS_PROD_CODE = PRODUCT_CODE
+       AND PRODUCT_FOR_DEPOSITS = 1
+       AND PRODUCT_FOR_RUN_ACS = 1
+       AND (   ACNTS_INTERNAL_ACNUM NOT IN
+                  (SELECT CLCHGWAIVDT_INTERNAL_ACNUM
+                     FROM CLCHGWAIVEDTL, CLCHGWAIVEDTLHIST
+                    WHERE     CLCHGWAIVDTHIST_CLIENT_NUM =
+                                 CLCHGWAIVDT_CLIENT_NUM
+                          AND CLCHGWAIVDT_CHARGE_CODE = 'SBM'
+                          AND CLCHGWAIVDT_INTERNAL_ACNUM =
+                                 CLCHGWAIVDTHIST_INT_ACNUM)
+            OR ACNTS_CLIENT_NUM NOT IN
+                  (SELECT CLCHGWAIVDT_CLIENT_NUM
+                     FROM CLCHGWAIVEDTL, CLCHGWAIVEDTLHIST
+                    WHERE     CLCHGWAIVDTHIST_CLIENT_NUM =
+                                 CLCHGWAIVDT_CLIENT_NUM
+                          AND CLCHGWAIVDT_CHARGE_CODE = 'SBM'
+                          AND CLCHGWAIVDT_INTERNAL_ACNUM =
+                                 CLCHGWAIVDTHIST_INT_ACNUM))
+       AND ACNTS_INTERNAL_ACNUM NOT IN
+              (SELECT TRAN_INTERNAL_ACNUM
+                 FROM TRAN2020, TRANBAT2020
+                WHERE     TRANBAT_ENTITY_NUM = 1
+                      AND TRAN_ENTITY_NUM = 1
+                      AND TRAN_DATE_OF_TRAN = TRANBAT_DATE_OF_TRAN
+                      AND TRAN_BRN_CODE = TRANBAT_BRN_CODE
+                      AND TRAN_BATCH_NUMBER = TRANBAT_BATCH_NUMBER
+                      AND TRAN_BRN_CODE = 26
+                      AND TRANBAT_DATE_OF_TRAN = '31-DEC-2020'
+                      AND TRANBAT_NARR_DTL1 = 'Maintenance Charge'
+                      AND TRAN_INTERNAL_ACNUM <> 0);
+
+----List of Deposit accounts of which TIN is available but TDS deducted at 15% rate
+
+SELECT *
+  FROM TDSPIDTL
+ WHERE     TDSPIDT_FIN_YR = 2020
+       AND TDSPIDT_BRN_CODE = 26
+       AND TDSPIDT_TDS_RATE = 15
+       AND TDSPIDT_DATE_OF_REC =
+              TO_DATE ('12/31/2020 00:00:00', 'MM/DD/YYYY HH24:MI:SS')
+       AND TDSPIDT_CUST_CODE IN
+              (SELECT CLIENTS_CODE
+                 FROM CLIENTS
+                WHERE TRIM (CLIENTS_PAN_GIR_NUM) IS NOT NULL);
+
+
+-----------------AMC ON INOP ACCOUNT
+
+SELECT ACNTS_BRN_CODE,
+       FACNO (1, ACNTS_INTERNAL_ACNUM) ACCOUNT_NO,
+       ACNTS_PROD_CODE,
+       ACNTS_AC_TYPE,
+       CASE WHEN ACNTS_INOP_ACNT = '1' THEN 'inoperative' ELSE 'active' END
+          INOPERATIVE_STATUS,
+       CASE WHEN ACNTS_DORMANT_ACNT = '1' THEN 'dormant' ELSE 'active' END
+          DORMANT_STATUS,
+       ACNTCHGAMT_CHARGE_AMT CHARGE_AMT
+  FROM ACNTCHARGEAMT, ACNTS
+ WHERE     ACNTCHGAMT_PROCESS_DATE = '28-dec-2020'
+       --AND ACNTCHGAMT_CHARGE_AMT NOT IN (100, 200, 300, 500,250)
+       AND ACNTCHGAMT_INTERNAL_ACNUM = ACNTS_INTERNAL_ACNUM
+       AND ACNTS_ENTITY_NUM = 1
+       AND ACNTCHGAMT_CHARGE_AMT <> 0
+       --  and ACNTS_INOP_ACNT = '1'
+       AND ACNTS_AC_TYPE = 'SBSS';
+
+--and ACNTS_PROD_CODE=1003
+
+-------------------LOAN-------------------
+SELECT ACNTS_BRN_CODE,
+         PRODUCT_CODE,
+         PRODUCT_NAME,
+         ACNTS_AC_TYPE,
+         IACLINK_ACTUAL_ACNUM account_no,
+         ACNTS_AC_NAME1 || ACNTS_AC_NAME2 account_name,
+         SUM (LNINTAPPL_ACT_INT_AMT) INTEREST_AMOUNT
+    FROM LNINTAPPL t,
+         acnts a,
+         ASSETCLS,
+         products p
+   WHERE     ACNTS_INTERNAL_ACNUM = LNINTAPPL_ACNT_NUM
+         AND ACNTS_ENTITY_NUM = 1
+         AND p.product_code = a.acnts_prod_code
+         AND ASSETCLS_ENTITY_NUM = 1
+         AND p.product_for_loans = 1
+         AND ACNTS_INTERNAL_ACNUM = ASSETCLS_INTERNAL_ACNUM
+         AND IACLINK_ENTITY_NUM = 1
+         AND ASSETCLS_ASSET_CODE IN ('ST', 'SD' , 'SU')
+         AND T.LNINTAPPL_APPL_DATE BETWEEN '01-JAN-2021' AND '31-dec-2021'
+GROUP BY ACNTS_BRN_CODE,
+         PRODUCT_CODE,
+         PRODUCT_NAME,
+         ACNTS_AC_TYPE,
+         IACLINK_ACTUAL_ACNUM,
+         ACNTS_AC_NAME1 || ACNTS_AC_NAME2;
+
+
+
+
+-----
+
+SELECT ACNTS_BRN_CODE,
+       FACNO (1, ACNTS_INTERNAL_ACNUM) ACCOUNT_NO,
+       ACNTS_PROD_CODE,
+       ACNTS_AC_TYPE,
+       CASE WHEN ACNTS_INOP_ACNT = '1' THEN 'inoperative' ELSE 'active' END
+          INOPERATIVE_STATUS,
+       CASE WHEN ACNTS_DORMANT_ACNT = '1' THEN 'dormant' ELSE 'active' END
+          DORMANT_STATUS,
+       ACNTCHGAMT_CHARGE_AMT CHARGE_AMT
+  FROM ACNTCHARGEAMT, ACNTS
+ WHERE     ACNTCHGAMT_PROCESS_DATE = '28-dec-2020'
+       --AND ACNTCHGAMT_CHARGE_AMT NOT IN (100, 200, 300, 500,250)
+       AND ACNTCHGAMT_INTERNAL_ACNUM = ACNTS_INTERNAL_ACNUM
+       AND ACNTS_ENTITY_NUM = 1
+       AND ACNTCHGAMT_CHARGE_AMT <> 0
+       --  and ACNTS_INOP_ACNT = '1'
+       --   AND ACNTS_AC_TYPE = 'SBSS'
+       AND (   ACNTS_INTERNAL_ACNUM IN
+                  (SELECT CLCHGWAIVDT_INTERNAL_ACNUM
+                     FROM CLCHGWAIVEDTL, CLCHGWAIVEDTLHIST, CLCHGWAIVER
+                    WHERE     CLCHGWAIVDTHIST_CLIENT_NUM =
+                                 CLCHGWAIVDT_CLIENT_NUM
+                          -- AND CLCHGWAIVDT_CHARGE_CODE = 'SBM'
+                          AND CLCHGWAIV_WAIVE_REQD = 1
+                          AND CLCHGWAIV_CLIENT_NUM = CLCHGWAIVDT_CLIENT_NUM
+                          AND CLCHGWAIVDT_INTERNAL_ACNUM =
+                                 CLCHGWAIVDTHIST_INT_ACNUM)
+            OR ACNTS_CLIENT_NUM IN
+                  (SELECT CLCHGWAIVDT_CLIENT_NUM
+                     FROM CLCHGWAIVEDTL, CLCHGWAIVEDTLHIST, CLCHGWAIVER
+                    WHERE     CLCHGWAIVDTHIST_CLIENT_NUM =
+                                 CLCHGWAIVDT_CLIENT_NUM
+                          AND CLCHGWAIV_INTERNAL_ACNUM =
+                                 CLCHGWAIVDTHIST_INT_ACNUM
+                          --   AND CLCHGWAIVDT_CHARGE_CODE = 'SBM'
+                          AND CLCHGWAIV_WAIVE_REQD = 1
+                          AND CLCHGWAIVDT_INTERNAL_ACNUM =
+                                 CLCHGWAIVDTHIST_INT_ACNUM))

@@ -1,0 +1,50 @@
+DROP TABLE SBLPROD.ACCUPDATECONFIG CASCADE CONSTRAINTS;
+
+CREATE TABLE SBLPROD.ACCUPDATECONFIG
+(
+  ACCCONFIG_SL            NUMBER,
+  ACCCONFIG_RPT_CODE      VARCHAR2(100 BYTE),
+  ACCCONFIG_RPT_SUB_TYPE  NUMBER,
+  ACCCONFIG_LBL_CODE      NUMBER,
+  ACCCONFIG_LBL_TYPE      VARCHAR2(3 BYTE),
+  ACCCONFIG_RPT_OPTION    CHAR(1 BYTE),
+  ACCCONFIG_CLIENT_TYPE   VARCHAR2(3 BYTE)
+)
+TABLESPACE TBFES
+PCTFREE    10
+INITRANS   1
+MAXTRANS   255
+STORAGE    (
+            INITIAL          64K
+            NEXT             1M
+            MINEXTENTS       1
+            MAXEXTENTS       UNLIMITED
+            PCTINCREASE      0
+            BUFFER_POOL      DEFAULT
+           )
+LOGGING 
+NOCOMPRESS 
+NOCACHE;
+
+
+ALTER TABLE SBLPROD.ACCUPDATECONFIG ADD (
+  PRIMARY KEY
+  (ACCCONFIG_SL, ACCCONFIG_RPT_CODE)
+  USING INDEX
+    TABLESPACE TBFES
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                INITIAL          64K
+                NEXT             1M
+                MINEXTENTS       1
+                MAXEXTENTS       UNLIMITED
+                PCTINCREASE      0
+                BUFFER_POOL      DEFAULT
+               )
+  ENABLE VALIDATE);
+
+
+--  There is no statement for index SBLPROD.SYS_C001388518.
+--  The object is created when the parent object is created.

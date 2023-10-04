@@ -1,0 +1,99 @@
+/* Formatted on 7/25/2018 7:15:44 PM (QP5 v5.227.12220.39754) */
+SELECT ACNTS_BRN_CODE Branch_code,
+       FACNO (1, ACNTS_INTERNAL_ACNUM) "Account No",
+       ACNTS_AC_NAME1 || ACNTS_AC_NAME2 "Account Name",
+       ACNTS_PROD_CODE "Product code",
+       ACNTS_AC_TYPE "Loan Type/ Nature",
+       ACNTS.ACNTS_OPENING_DATE "AC_OPENING_DATE",
+       LMTLINE_DATE_OF_SANCTION "Sanction Date",
+       LIMITLINE.LMTLINE_LIMIT_EFF_DATE "EFFECTIVE_DATE",
+       LIMITLINE.LMTLINE_SANCTION_AMT "sanction limit",
+       NULL "DISB_DATE",
+       LMTLINE_LIMIT_EXPIRY_DATE "Expire Date",
+       NULL "SEC_REQUIRED_AMOUNT",
+       NULL "DISB_AMT",
+       NULL "INSTALL_NO",
+       NULL "INSTALL_SIZE",
+       NULL "REPAYMENT_FREQ",
+       NULL "REPAY_START_DATE",
+       NULL "LAST_INSTALLMENT_DUE_DATE",
+       NULL "TOTAL_INT_DEBIT_BEFOR_MIG",
+       NULL "TOTAL_INT_DEBIT_AFTER_MIG",
+       (SELECT LNACNT_INT_APPLIED_UPTO_DATE
+          FROM LOANACNTS
+         WHERE     LNACNT_ENTITY_NUM = 1
+               AND LNACNT_INTERNAL_ACNUM = ACNTS_INTERNAL_ACNUM)
+          "LAST_INT_APPLIED_DATE",
+       (SELECT LNACNT_INT_ACCR_UPTO
+          FROM LOANACNTS
+         WHERE     LNACNT_ENTITY_NUM = 1
+               AND LNACNT_INTERNAL_ACNUM = ACNTS_INTERNAL_ACNUM)
+          "LAST_INT_ACCR_DATE",
+       NVL (
+          (SELECT NVL (LNSUSPBAL_SUSP_BAL, 0)
+             FROM LNSUSPBAL
+            WHERE     LNSUSPBAL_ENTITY_NUM = 1
+                  AND LNSUSPBAL_ACNT_NUM = ACNTS_INTERNAL_ACNUM),
+          0)
+          "Suspense Balance",
+       NULL "RESCHEDULE_AMOUNT",
+       NULL "RESCHEDULE_DATE",
+       NULL "LAST_RESCHEDULE_DATE",
+       NULL "LAST_RESCHEDULE_AMOUNT",
+       (SELECT LNACMIS_HO_DEPT_CODE
+          FROM LNACMIS
+         WHERE     LNACMIS_ENTITY_NUM = 1
+               AND LNACMIS_INTERNAL_ACNUM = ACNTS_INTERNAL_ACNUM)
+          "LNACNT_CL_REPORT_CODE",
+       (SELECT ASSETCLSH_ASSET_CODE
+          FROM ASSETCLSHIST
+         WHERE     ASSETCLSH_ENTITY_NUM = 1
+               AND ASSETCLSH_INTERNAL_ACNUM = ACNTS_INTERNAL_ACNUM
+               AND ASSETCLSH_EFF_DATE =
+                      (SELECT MAX (ASSETCLSH_EFF_DATE)
+                         FROM ASSETCLSHIST
+                        WHERE     ASSETCLSH_ENTITY_NUM = 1
+                              AND ASSETCLSH_INTERNAL_ACNUM =
+                                     ACNTS_INTERNAL_ACNUM
+                              AND ASSETCLSH_EFF_DATE <= '31-MAR-2018'))
+          "CL Status",
+       CASE WHEN ACNTS_ENTD_BY = 'MIG' THEN 'Legacy' ELSE 'CBS' END
+          "Origin of Account(CBS/Legacy)",
+       MIG_END_DATE "CBS Migration Date",
+       (SELECT MBRN_PARENT_ADMIN_CODE
+          FROM MBRN
+         WHERE MBRN_CODE = ACNTS_BRN_CODE)
+          "PO Code",
+       (SELECT MBRN_PARENT_ADMIN_CODE
+          FROM MBRN
+         WHERE MBRN_CODE IN (SELECT MBRN_PARENT_ADMIN_CODE
+                               FROM MBRN
+                              WHERE MBRN_CODE = ACNTS_BRN_CODE))
+          "GMO_CODE"
+  --LIMITLINE.LMTLINE_SANCTION_AMT,
+  --lnacdsdtl.lnacdsdtl_disb_date,
+  --lnacdsdtl.lnacdsdtl_disb_amount,
+  --lnacrsdtl.repay_freq,
+  --lnacrsdtl.repay_from_date,
+  --loanacnts.LNACNT_INT_APPLIED_UPTO_DATE,
+  --loanacnts.LAST_INT_ACCR_DATE
+  --
+  FROM ACNTS,
+       PRODUCTS,
+       ACASLLDTL,
+       LIMITLINE,
+       MIG_DETAIL
+ WHERE     ACNTS_ENTITY_NUM = 1
+       AND PRODUCT_CODE = ACNTS_PROD_CODE
+       AND PRODUCT_FOR_LOANS = 1
+       AND PRODUCT_FOR_RUN_ACS = 1
+       AND ACNTS_BRN_CODE IN
+              (SELECT BRNLISTDTL_BRN_CODE
+                 FROM BRNLISTDTL
+                WHERE BRNLISTDTL_ENTITY_NUM = 1 AND BRNLISTDTL_LIST_NUM = 32)
+       AND BRANCH_CODE = ACNTS_BRN_CODE
+       AND ACASLLDTL_ENTITY_NUM = LMTLINE_ENTITY_NUM
+       AND LMTLINE_CLIENT_CODE = ACASLLDTL_CLIENT_NUM
+       AND ACASLLDTL_LIMIT_LINE_NUM = LMTLINE_NUM
+       AND ACASLLDTL_INTERNAL_ACNUM = ACNTS_INTERNAL_ACNUM
+       AND ACNTS_CLOSURE_DATE IS NULL;

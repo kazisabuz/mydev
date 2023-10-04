@@ -1,0 +1,11 @@
+  SELECT NVL (S.USERNAME, '(oracle)') AS USERNAME,
+         S.SID,
+         S.SERIAL#,
+         SW.EVENT,
+         SW.WAIT_CLASS,
+         SW.WAIT_TIME,
+         SW.SECONDS_IN_WAIT,
+         SW.STATE
+    FROM V$SESSION_WAIT SW, V$SESSION S
+   WHERE S.SID = SW.SID
+ORDER BY SW.SECONDS_IN_WAIT DESC;

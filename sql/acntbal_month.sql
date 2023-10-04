@@ -1,0 +1,69 @@
+SELECT *FROM(
+  SELECT ACNTS_BRN_CODE,
+         ACNTS_PROD_CODE,GET_F12_CODE(ACNTS_GLACC_CODE) GL_CODE,
+         COUNT (ACNTS_INTERNAL_ACNUM) total_accounts,
+         SUM (NVL (ACBALH_BC_BAL, 0)) OUTSTANDING_BALANCE,
+         TO_CHAR (ACBALH_ASON_DATE, 'MON-RR') REPORT_DATE,ACNTS_AC_TYPE,
+         ACNTS_AC_SUB_TYPE
+    FROM acnts, ACBALASONHIST A
+   WHERE     ACNTS_AC_TYPE IN
+                ('SBSS',
+                 'SBGOV',
+                 'SBOFF',
+                 'SBGOV',
+                 'SBCOL',
+                 'SNDS',
+                 'CAGOV',
+                 'CACOL',
+                 'CAOFF')
+         AND ACNTS_ENTITY_NUM = 1
+         AND ACBALH_ENTITY_NUM=1
+         AND ACBALH_INTERNAL_ACNUM = ACNTS_INTERNAL_ACNUM
+         AND ACNTS_CLOSURE_DATE IS NULL
+         AND A.ACBALH_ASON_DATE =
+                (SELECT MAX (ACBALH_ASON_DATE)
+                   FROM ACBALASONHIST
+                  WHERE     ACBALH_ENTITY_NUM = 1
+                        AND ACBALH_INTERNAL_ACNUM = ACNTS_INTERNAL_ACNUM
+                        AND ACBALH_ASON_DATE <= '26-AUG-2018')
+GROUP BY ACNTS_AC_TYPE,
+         ACNTS_AC_SUB_TYPE,GET_F12_CODE(ACNTS_GLACC_CODE)  ,
+         ACNTS_BRN_CODE,
+         ACNTS_PROD_CODE,TO_CHAR (ACBALH_ASON_DATE, 'MON-RR')
+ORDER BY ACNTS_PROD_CODE)
+where OUTSTANDING_BALANCE <>0
+ORDER BY ACNTS_PROD_CODE, REPORT_DATE ;
+
+
+
+-----------------------
+SELECT *FROM(
+  SELECT ACNTS_BRN_CODE,
+         ACNTS_PROD_CODE,GET_F12_CODE(ACNTS_GLACC_CODE) GL_CODE,
+         COUNT (ACNTS_INTERNAL_ACNUM) total_accounts,
+         SUM (NVL ((ACNTBBAL_BC_OPNG_DB_SUM-ACNTBBAL_BC_OPNG_CR_SUM), 0)) OUTSTANDING_BALANCE,
+         '0'||ACNTBBAL_MONTH||'-'||ACNTBBAL_YEAR  REPORT_DATE,ACNTS_AC_TYPE,
+         ACNTS_AC_SUB_TYPE
+    FROM acnts, ACNTBBAL A
+   WHERE     ACNTS_AC_TYPE IN
+                ('SBSS',
+                 'SBGOV',
+                 'SBOFF',
+                 'SBGOV',
+                 'SBCOL',
+                 'SNDS',
+                 'CAGOV',
+                 'CACOL',
+                 'CAOFF')
+         AND ACNTS_ENTITY_NUM = 1
+         AND ACNTBBAL_ENTITY_NUM=1
+         AND ACNTBBAL_INTERNAL_ACNUM = ACNTS_INTERNAL_ACNUM
+         AND ACNTS_CLOSURE_DATE IS NULL
+         and ACNTBBAL_YEAR=2018
+GROUP BY ACNTS_AC_TYPE,
+         ACNTS_AC_SUB_TYPE,GET_F12_CODE(ACNTS_GLACC_CODE)  ,
+         ACNTS_BRN_CODE,
+         ACNTS_PROD_CODE, '0'||ACNTBBAL_MONTH||'-'||ACNTBBAL_YEAR
+ORDER BY ACNTS_PROD_CODE)
+where OUTSTANDING_BALANCE <>0
+ORDER BY ACNTS_PROD_CODE, REPORT_DATE 

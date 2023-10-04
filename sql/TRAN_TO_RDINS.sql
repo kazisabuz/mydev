@@ -1,0 +1,160 @@
+/* Formatted on 5/16/2022 12:44:03 PM (QP5 v5.252.13127.32867) */
+INSERT INTO RDINS
+   SELECT 1 RDINS_ENTITY_NUM,
+          TRAN_INTERNAL_ACNUM RDINS_RD_AC_NUM,
+          TRAN_DATE_OF_TRAN RDINS_ENTRY_DATE,
+          TRAN_BATCH_SL_NUM RDINS_ENTRY_DAY_SL,
+          TRAN_DATE_OF_TRAN RDINS_EFF_DATE,
+          TRAN_AMOUNT RDINS_AMT_OF_PYMT,
+          TRAN_AMOUNT RDINS_TWDS_INSTLMNT,
+          0 RDINS_TWDS_PENAL_CHGS,
+          0 RDINS_TWDS_INT,
+          TRAN_NARR_DTL1 RDINS_REM1,
+          TRAN_NARR_DTL2 RDINS_REM2,
+          TRAN_NARR_DTL3 RDINS_REM3,
+          NULL RDINS_TRANSTL_INV_NUM,
+          TRAN_BRN_CODE POST_TRAN_BRN,
+          TRAN_DATE_OF_TRAN POST_TRAN_DATE,
+          TRAN_BATCH_NUMBER POST_TRAN_BATCH_NUM,
+          TRAN_ENTD_BY RDINS_ENTD_BY,
+          TRAN_ENTD_ON RDINS_ENTD_ON,
+          NULL RDINS_LAST_MOD_BY,
+          NULL RDINS_LAST_MOD_ON,
+          TRAN_AUTH_BY RDINS_AUTH_BY,
+          TRAN_AUTH_ON RDINS_AUTH_ON,
+          NULL RDINS_REJ_BY,
+          NULL RDINS_REJ_ON,
+          NULL RDINS_TWDS_CHG,
+          NULL RDINS_TWDS_VAT,
+          0 sub_brn_code
+     FROM TRAN2023
+    WHERE     TRAN_ENTITY_NUM = 1
+          AND TRAN_INTERNAL_ACNUM = 10212100021733
+          AND TRAN_DB_CR_FLG = 'C'
+          AND TRAN_AUTH_BY IS NOT NULL
+          AND (TRAN_BRN_CODE, 
+          TRAN_DATE_OF_TRAN,
+           TRAN_BATCH_NUMBER) NOT IN
+            (SELECT POST_TRAN_BRN,RDINS_ENTRY_DATE,
+  POST_TRAN_BATCH_NUM
+  FROM rdins
+ WHERE     RDINS_ENTITY_NUM=1
+   AND RDINS_RD_AC_NUM =  10212100021733);
+--and TRAN_NARR_DTL1 like 'BEFTN%'
+--AND TRAN_DATE_OF_TRAN = '15-sep-2020'
+--and TRAN_BATCH_SL_NUM <>5
+
+
+/* Formatted on 6/20/2023 5:05:17 PM (QP5 v5.388) */
+DECLARE
+    W_SQL              VARCHAR2 (10000);
+    V_INTERNAL_ACNUM   NUMBER (14);
+    R_INTERNAL_ACNUM   NUMBER (14);
+    R_AMOUNT           NUMBER (14) := 0;
+
+    V_OPENING_YEAR     VARCHAR2 (4);
+    V_RUNNING_YEAR     VARCHAR2 (4);
+BEGIN
+    FOR IDX
+        IN (SELECT ACNTS_INTERNAL_ACNUM                     INTERNAL_ACNUM,
+                   TO_CHAR (ACNTS_OPENING_DATE, 'YYYY')     OPENING_YEAR,
+                   TO_CHAR (SYSDATE, 'YYYY')                RUNNING_YEAR
+             FROM ACC4, IACLINK, ACNTS
+            WHERE     IACLINK_ENTITY_NUM = 1
+                  AND IACLINK_ACTUAL_ACNUM = ACC_NO
+                  AND ACNTS_ENTITY_NUM = 1
+                  AND ACNTS_INTERNAL_ACNUM = IACLINK_INTERNAL_ACNUM)
+    LOOP
+        V_INTERNAL_ACNUM := IDX.INTERNAL_ACNUM;
+        V_OPENING_YEAR := IDX.OPENING_YEAR;
+        V_RUNNING_YEAR := IDX.RUNNING_YEAR;
+
+       <<INNER_LOOP>>
+        LOOP
+            EXIT INNER_LOOP WHEN V_OPENING_YEAR > V_RUNNING_YEAR;
+
+            W_SQL :=
+                   ' 
+        INSERT INTO RDINS
+            SELECT 1 RDINS_ENTITY_NUM,
+            TRAN_INTERNAL_ACNUM RDINS_RD_AC_NUM,
+            TRAN_DATE_OF_TRAN RDINS_ENTRY_DATE,
+            ROWNUM + 1 RDINS_ENTRY_DAY_SL,
+            TRAN_DATE_OF_TRAN RDINS_EFF_DATE,
+       CASE
+          WHEN MOD (TRAN_AMOUNT, PBDCONT_AC_DEP_AMT) = 0
+          THEN
+             TRAN_AMOUNT
+          WHEN MOD (TRAN_AMOUNT, PBDCONT_AC_DEP_AMT) <> 0
+          THEN
+             TRAN_AMOUNT - (MOD (TRAN_AMOUNT, PBDCONT_AC_DEP_AMT))
+       END
+          RDINS_AMT_OF_PYMT,
+       CASE
+          WHEN MOD (TRAN_AMOUNT, PBDCONT_AC_DEP_AMT) = 0
+          THEN
+             TRAN_AMOUNT
+          WHEN MOD (TRAN_AMOUNT, PBDCONT_AC_DEP_AMT) <> 0
+          THEN
+             TRAN_AMOUNT - (MOD (TRAN_AMOUNT, PBDCONT_AC_DEP_AMT))
+       END
+          RDINS_TWDS_INSTLMNT,
+       0 RDINS_TWDS_PENAL_CHGS,
+       0 RDINS_TWDS_INT,
+       TRAN_NARR_DTL1 RDINS_REM1,
+       TRAN_NARR_DTL2 RDINS_REM2,
+       TRAN_NARR_DTL3 RDINS_REM3,
+       NULL RDINS_TRANSTL_INV_NUM,
+       TRAN_BRN_CODE POST_TRAN_BRN,
+       TRAN_DATE_OF_TRAN POST_TRAN_DATE,
+       TRAN_BATCH_NUMBER POST_TRAN_BATCH_NUM,
+       TRAN_ENTD_BY RDINS_ENTD_BY,
+       TRAN_ENTD_ON RDINS_ENTD_ON,
+       NULL RDINS_LAST_MOD_BY,
+       NULL RDINS_LAST_MOD_ON,
+       TRAN_AUTH_BY RDINS_AUTH_BY,
+       TRAN_AUTH_ON RDINS_AUTH_ON,
+       NULL RDINS_REJ_BY,
+       NULL RDINS_REJ_ON,
+       NULL RDINS_TWDS_CHG,
+       NULL RDINS_TWDS_VAT,
+       0 RDINS_SUBBRN_CODE              
+           FROM TRAN'
+                || TO_NUMBER (V_OPENING_YEAR)
+                || ', 
+                TRANBAT'
+                || TO_NUMBER (V_OPENING_YEAR)
+                || ', 
+                PBDCONTRACT
+          WHERE     TRAN_ENTITY_NUM = 1 
+                AND TRANBAT_ENTITY_NUM=1 
+                AND PBDCONT_ENTITY_NUM = 1
+                AND TRAN_BRN_CODE=TRANBAT_BRN_CODE 
+                AND TRAN_DATE_OF_TRAN =TRANBAT_DATE_OF_TRAN
+                AND TRAN_BATCH_NUMBER= TRANBAT_BATCH_NUMBER
+                AND TRANBAT_SOURCE_TABLE=''BEFTN_TRANSACTION''
+                AND PBDCONT_BRN_CODE = TRAN_ACING_BRN_CODE
+                AND TRAN_INTERNAL_ACNUM = PBDCONT_DEP_AC_NUM
+                AND PBDCONT_CONT_NUM = TRAN_CONTRACT_NUM
+                AND TRAN_DB_CR_FLG = ''C''
+                AND TRAN_AUTH_BY IS NOT NULL
+                AND TRAN_INTERNAL_ACNUM = :1
+                AND (TRAN_INTERNAL_ACNUM,
+                     TRAN_DATE_OF_TRAN,
+                     TRAN_BATCH_NUMBER) NOT IN
+                       (SELECT RDINS_RD_AC_NUM,
+                               RDINS_ENTRY_DATE,
+                               POST_TRAN_BATCH_NUM
+                          FROM RDINS
+                         WHERE     RDINS_ENTITY_NUM = 1
+                               AND RDINS_RD_AC_NUM = :2)
+                AND TRAN_AMOUNT >= PBDCONT_AC_DEP_AMT';
+
+            EXECUTE IMMEDIATE W_SQL
+                USING V_INTERNAL_ACNUM, V_INTERNAL_ACNUM;
+
+            V_OPENING_YEAR := V_OPENING_YEAR + 1;
+            COMMIT;
+        END LOOP INNER_LOOP;
+    END LOOP;
+END;

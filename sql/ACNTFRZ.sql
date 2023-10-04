@@ -1,0 +1,25 @@
+INSERT INTO ACNTFRZ (ACNTFRZ_ENTITY_NUM,
+                     ACNTFRZ_INTERNAL_ACNUM,
+                     ACNTFRZ_FREEZED_ON,
+                     ACNTFRZ_STOP_DB,
+                     ACNTFRZ_STOP_CR,
+                     ACNTFRZ_FREEZE_REQ_BY1,
+                     ACNTFRZ_REASON1,
+                     ACNTFRZ_ENTD_BY,
+                     ACNTFRZ_ENTD_ON,
+                     ACNTFRZ_AUTH_BY,
+                     ACNTFRZ_AUTH_ON)
+   SELECT 1 ACNTFRZ_ENTITY_NUM,
+           IACLINK_INTERNAL_ACNUM  ACNTFRZ_INTERNAL_ACNUM,
+          ACNT_OPEN_DATE,
+          '1' ACNTFRZ_STOP_DB,
+          '0' ACNTFRZ_STOP_CR,
+          OPENED_BY ACNTFRZ_FREEZE_REQ_BY1,
+          'Set by Third Party system' ACNTFRZ_REASON1,
+          OPENED_BY ACNTFRZ_ENTD_BY,
+          OPENED_ON ACNTFRZ_ENTD_ON,
+          OPENED_BY ACNTFRZ_AUTH_BY,
+          OPENED_ON  ACNTFRZ_AUTH_ON
+     FROM API_ACNT_OPEN,IACLINK
+     WHERE ACTUAL_ACNT_NUMBER=IACLINK_ACTUAL_ACNUM
+     and  IACLINK_INTERNAL_ACNUM not in (select ACNTFRZ_INTERNAL_ACNUM from ACNTFRZ)

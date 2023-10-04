@@ -1,0 +1,72 @@
+/* Formatted on 2/13/2020 12:20:30 PM (QP5 v5.227.12220.39754) */
+SELECT MBRN_CODE BR_CODE,
+       MBRN_NAME,
+       GLBALH_GLACC_CODE,
+       EXTGL_EXT_HEAD_DESCN,
+       GLBALH_ASON_DATE,
+       NVL (GLBALH_BC_BAL, 0) OUTSTANDING_BALANCE
+  FROM GLBALASONHIST, EXTGL, MBRN
+ WHERE     GLBALH_ENTITY_NUM = 1
+       AND GLBALH_GLACC_CODE IN
+              ('225116158')
+       AND GLBALH_BRN_CODE = MBRN_CODE
+       AND GLBALH_ASON_DATE = '31-DEC-2018'
+       AND GLBALH_GLACC_CODE = EXTGL_ACCESS_CODE
+       AND GLBALH_BC_BAL <> 0
+UNION ALL
+SELECT MBRN_CODE BR_CODE,
+       MBRN_NAME,
+       GLBALH_GLACC_CODE,
+       EXTGL_EXT_HEAD_DESCN,
+       GLBALH_ASON_DATE,
+       NVL (GLBALH_BC_BAL, 0) OUTSTANDING_BALANCE
+  FROM GLBALASONHIST, EXTGL, MBRN
+ WHERE     GLBALH_ENTITY_NUM = 1
+       AND GLBALH_GLACC_CODE IN
+              ('225116158')
+       AND GLBALH_BRN_CODE = MBRN_CODE
+       AND GLBALH_ASON_DATE = '31-OCT-2020'
+       AND GLBALH_GLACC_CODE = EXTGL_ACCESS_CODE
+       AND GLBALH_BC_BAL <> 0
+ORDER BY 1;
+
+
+/* Formatted on 8/17/2021 11:26:48 AM (QP5 v5.149.1003.31008) */
+SELECT GMO_BRANCH GMO_CODE,
+       (SELECT MBRN_NAME
+          FROM MBRN
+         WHERE MBRN_ENTITY_NUM = 1 AND MBRN_CODE = GMO_BRANCH)
+          GMO_NAME,
+       PO_BRANCH PO_CODE,
+       (SELECT MBRN_NAME
+          FROM MBRN
+         WHERE MBRN_ENTITY_NUM = 1 AND MBRN_CODE = PO_BRANCH)
+          PO_NAME,
+       tt.*
+  FROM (SELECT MBRN_CODE ,
+               MBRN_NAME,
+               GLBALH_GLACC_CODE,
+               EXTGL_EXT_HEAD_DESCN,
+               GLBALH_ASON_DATE,
+               NVL (GLBALH_BC_BAL, 0) OUTSTANDING_BALANCE
+          FROM GLBALASONHIST, EXTGL, MBRN
+         WHERE GLBALH_ENTITY_NUM = 1
+               AND GLBALH_GLACC_CODE IN
+                      ('211140116',
+                       '213101104',
+                       '211140104',
+                       '211140107',
+                       '211140110',
+                       '213101101',
+                       '213101107',
+                       '211140120',
+                       '211140113',
+                       '211140141',
+                       '213104101',
+                       '211140101')
+               AND GLBALH_BRN_CODE = MBRN_CODE
+               AND GLBALH_ASON_DATE = '30-jun-2021'
+               AND GLBALH_GLACC_CODE = EXTGL_ACCESS_CODE
+               AND GLBALH_BC_BAL <> 0) TT,
+       MBRN_TREE1
+ WHERE TT.MBRN_CODE = BRANCH  AND OUTSTANDING_BALANCE <> 0;

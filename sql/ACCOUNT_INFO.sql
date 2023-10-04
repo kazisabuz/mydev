@@ -1,0 +1,205 @@
+SELECT *
+FROM(SELECT FACNO(1,ACNTS_INTERNAL_ACNUM) ACC_NO,
+       ACNTS_AC_NAME1||' '||ACNTS_AC_NAME2 ACNTS_AC_NAME ,
+       I.INDCLIENT_FATHER_NAME,
+       INDCLIENT_MOTHER_NAME,
+       INDCLIENT_BIRTH_DATE,
+       INDCLIENT_TEL_GSM MOBILE_NUMBER,
+       (SELECT PIDDOCS_DOCID_NUM
+          FROM PIDDOCS
+         WHERE PIDDOCS_INV_NUM = A.ACNTS_CLIENT_NUM AND PIDDOCS_PID_TYPE='NID')
+          PID,
+          ACNTS_AC_ADDR1
+       || ' '
+       || ACNTS_AC_ADDR2
+       || ' '
+       || ACNTS_AC_ADDR3
+       || ' '
+       || ACNTS_AC_ADDR4
+       || ' '
+       || ACNTS_AC_ADDR5
+          ADDRESS
+  FROM ACNTS A, INDCLIENTS I
+ WHERE     ACNTS_ENTITY_NUM = 1
+       AND ACNTS_CLOSURE_DATE IS NULL
+       AND INDCLIENT_CODE = A.ACNTS_CLIENT_NUM
+       AND ACNTS_BRN_CODE = 1180
+       AND ACNTS_OPENING_DATE <= '31-DEC-2003'
+       UNION ALL 
+       SELECT FACNO(1,ACNTS_INTERNAL_ACNUM) ACC_NO,
+      ACNTS_AC_NAME1||' '||ACNTS_AC_NAME2 ACNTS_AC_NAME,
+      NULL INDCLIENT_FATHER_NAME,
+      NULL INDCLIENT_MOTHER_NAME,
+      NULL INDCLIENT_BIRTH_DATE,
+        ADDRDTLS_MOBILE_NUM  MOBILE_NUMBER,
+       (SELECT PIDDOCS_DOCID_NUM
+          FROM PIDDOCS
+         WHERE PIDDOCS_INV_NUM = A.ACNTS_CLIENT_NUM AND PIDDOCS_PID_TYPE='NID')
+          PID,
+          ACNTS_AC_ADDR1
+       || ' '
+       || ACNTS_AC_ADDR2
+       || ' '
+       || ACNTS_AC_ADDR3
+       || ' '
+       || ACNTS_AC_ADDR4
+       || ' '
+       || ACNTS_AC_ADDR5
+          ADDRESS
+  FROM ACNTS A, CLIENTS I,ADDRDTLS
+ WHERE     ACNTS_ENTITY_NUM = 1
+ AND ADDRDTLS_INV_NUM=A.ACNTS_CLIENT_NUM
+       AND ACNTS_CLOSURE_DATE IS NULL
+       AND CLIENTS_CODE = A.ACNTS_CLIENT_NUM
+       AND CLIENTS_TYPE_FLG='C'
+       AND ACNTS_BRN_CODE = 1180
+       AND ACNTS_OPENING_DATE <= '31-DEC-2003') T
+       ORDER BY ACNTS_AC_NAME 
+-------------------------------------------------------------------------------------------------------------------------------
+	   SELECT *
+FROM(SELECT FACNO(1,ACNTS_INTERNAL_ACNUM) ACC_NO,ACNTS_OPENING_DATE,
+       ACNTS_AC_NAME1||' '||ACNTS_AC_NAME2 ACNTS_AC_NAME ,
+       I.INDCLIENT_FATHER_NAME,
+       INDCLIENT_MOTHER_NAME,
+       INDCLIENT_BIRTH_DATE,
+       INDCLIENT_TEL_GSM MOBILE_NUMBER,
+       (SELECT PIDDOCS_DOCID_NUM
+          FROM PIDDOCS
+         WHERE TO_CHAR(PIDDOCS_SOURCE_KEY) = TO_CHAR(A.ACNTS_CLIENT_NUM) AND PIDDOCS_PID_TYPE='NID')
+          PID,
+          ACNTS_AC_ADDR1
+       || ' '
+       || ACNTS_AC_ADDR2
+       || ' '
+       || ACNTS_AC_ADDR3
+       || ' '
+       || ACNTS_AC_ADDR4
+       || ' '
+       || ACNTS_AC_ADDR5
+          ADDRESS
+  FROM ACNTS A, INDCLIENTS I
+ WHERE     ACNTS_ENTITY_NUM = 1
+       AND ACNTS_CLOSURE_DATE IS NULL
+       AND INDCLIENT_CODE = A.ACNTS_CLIENT_NUM
+       AND ACNTS_BRN_CODE = 1180
+       AND ACNTS_OPENING_DATE <= '31-DEC-2003'
+       UNION ALL 
+       SELECT FACNO(1,ACNTS_INTERNAL_ACNUM) ACC_NO,ACNTS_OPENING_DATE,
+      ACNTS_AC_NAME1||' '||ACNTS_AC_NAME2 ACNTS_AC_NAME,
+      NULL INDCLIENT_FATHER_NAME,
+      NULL INDCLIENT_MOTHER_NAME,
+      NULL INDCLIENT_BIRTH_DATE,
+       null MOBILE_NUMBER,
+       (SELECT PIDDOCS_DOCID_NUM
+          FROM PIDDOCS
+         WHERE TO_CHAR(PIDDOCS_SOURCE_KEY) = TO_CHAR(A.ACNTS_CLIENT_NUM) AND PIDDOCS_PID_TYPE='NID')
+          PID,
+          ACNTS_AC_ADDR1
+       || ' '
+       || ACNTS_AC_ADDR2
+       || ' '
+       || ACNTS_AC_ADDR3
+       || ' '
+       || ACNTS_AC_ADDR4
+       || ' '
+       || ACNTS_AC_ADDR5
+          ADDRESS
+  FROM ACNTS A, CLIENTS I 
+ WHERE     ACNTS_ENTITY_NUM = 1
+       AND ACNTS_CLOSURE_DATE IS NULL
+       AND I.CLIENTS_CODE = A.ACNTS_CLIENT_NUM
+       AND CLIENTS_TYPE_FLG='C'
+       AND ACNTS_BRN_CODE = 1180
+       AND ACNTS_OPENING_DATE <= '31-DEC-2003') T
+       ORDER BY ACNTS_AC_NAME 
+       
+       
+       
+-----------------------------------------------------------------------------------
+SELECT GMO_CODE,
+       (SELECT MBRN_NAME
+          FROM MBRN
+         WHERE MBRN_CODE = GMO_CODE)
+          GMO_NAME,
+       PO_CODE,
+       (SELECT MBRN_NAME
+          FROM MBRN
+         WHERE MBRN_CODE = PO_CODE)
+          PO_NAME,
+       MBRN_CODE,
+       MBRN_NAME,
+       ACC_NO,
+       ACNTS_AC_NAME,
+       FATHER_NAME,
+       MOTHER_NAME,
+       GENDER,
+       BIRTH_DATE,
+       MOBILE_NUMBER,
+       NID,
+       TIN_NUMBER,
+       ADDRESS,
+       OCUP,
+       NOMINEE_NAME,
+       NOMINEE_ADDRESS
+  FROM (SELECT FACNO (1, ACNTS_INTERNAL_ACNUM) ACC_NO,
+               ACNTS_AC_NAME1 || ' ' || ACNTS_AC_NAME2 ACNTS_AC_NAME,(SELECT INDCLIENT_SEX
+FROM INDCLIENTS WHERE INDCLIENT_CODE=A.ACNTS_CLIENT_NUM) GENDER,
+               MBRN_CODE,
+               MBRN_NAME,
+               (SELECT INDCLIENT_FATHER_NAME FROM
+INDCLIENTS WHERE INDCLIENT_CODE=A.ACNTS_CLIENT_NUM) FATHER_NAME,
+               (SELECT INDCLIENT_MOTHER_NAME
+FROM INDCLIENTS WHERE INDCLIENT_CODE=A.ACNTS_CLIENT_NUM) MOTHER_NAME,
+(SELECT INDCLIENT_BIRTH_DATE
+FROM INDCLIENTS WHERE INDCLIENT_CODE=A.ACNTS_CLIENT_NUM) BIRTH_DATE,
+               ADDRDTLS_MOBILE_NUM MOBILE_NUMBER,
+               (SELECT PIDDOCS_DOCID_NUM
+                  FROM PIDDOCS
+                 WHERE     PIDDOCS_INV_NUM = A.ACNTS_CLIENT_NUM
+                       AND PIDDOCS_PID_TYPE = 'NID')
+                  NID,
+               CLIENTS_PAN_GIR_NUM TIN_NUMBER,
+                (SELECT OCCUPATIONS_DESCN
+                  FROM OCCUPATIONS,INDCLIENTS
+                 WHERE OCCUPATIONS_CODE = INDCLIENT_OCCUPN_CODE
+                 AND INDCLIENT_CODE=A.ACNTS_CLIENT_NUM)
+                  OCUP,
+               (SELECT MBRN_PARENT_ADMIN_CODE
+                  FROM MBRN
+                 WHERE MBRN_CODE = A.ACNTS_BRN_CODE)
+                  PO_CODE,
+               (SELECT MBRN_PARENT_ADMIN_CODE
+                  FROM MBRN
+                 WHERE MBRN_CODE IN (SELECT MBRN_PARENT_ADMIN_CODE
+                                       FROM MBRN
+                                      WHERE MBRN_CODE = A.ACNTS_BRN_CODE))
+                  GMO_CODE,
+                  ACNTS_AC_ADDR1
+               || ' '
+               || ACNTS_AC_ADDR2
+               || ' '
+               || ACNTS_AC_ADDR3
+               || ' '
+               || ACNTS_AC_ADDR4
+               || ' '
+               || ACNTS_AC_ADDR5
+                  ADDRESS,
+               NOMREGDTL_NOMINEE_NAME NOMINEE_NAME,
+               NOMREGDTL_ADDR NOMINEE_ADDRESS
+          FROM ACNTS A,
+               CLIENTS,
+               NOMREGDTL,
+               ADDRDTLS,
+               MBRN
+         WHERE     ACNTS_ENTITY_NUM = 1
+               AND ACNTS_CLOSURE_DATE IS NULL
+               AND CLIENTS_ADDR_INV_NUM = ADDRDTLS_INV_NUM
+               AND MBRN_CODE = ACNTS_BRN_CODE
+              -- AND INDCLIENT_CODE = CLIENTS_CODE
+               AND NOMREGDTL_AC_NUM = ACNTS_INTERNAL_ACNUM
+               AND CLIENTS_CODE = ACNTS_CLIENT_NUM
+               AND ACNTS_BRN_CODE IN (50203, 50211, 50021, 50039)
+               AND ACNTS_INOP_ACNT='0'
+               AND  ACNTS_DORMANT_ACNT='0' 
+               AND ACNTS_CLOSURE_DATE IS NULL)
+--AND ACNTS_OPENING_DATE <= '31-DEC-2003'

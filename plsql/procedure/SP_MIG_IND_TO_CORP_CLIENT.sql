@@ -1,0 +1,218 @@
+CREATE OR REPLACE PROCEDURE SP_MIG_IND_TO_CORP_CLIENT (
+    V_ENTITY_NUM    IN     NUMBER,
+    P_CLIENT_NUM    IN     NUMBER,
+    P_USER_ID       IN     VARCHAR2,
+    P_BRANCE_CODE   IN     NUMBER,
+    P_TIN_NUMBER    IN     VARCHAR2,
+    P_VIN_NUMBER    IN     VARCHAR2,
+    P_ERR_MSG          OUT VARCHAR2)
+IS
+    INIT_PARAM    EXCEPTION;
+    V_ERR_MSG     VARCHAR2 (1000);
+    W_SQL         VARCHAR2 (5000);
+    CLIENT_CODE   VARCHAR2 (80);
+BEGIN
+    V_ERR_MSG := NULL;
+    CLIENT_CODE := P_CLIENT_NUM;
+
+    IF P_CLIENT_NUM IS NULL OR P_USER_ID IS NULL OR P_BRANCE_CODE IS NULL
+    THEN
+        --OR P_TIN_NUMBER IS NULL OR P_VIN_NUMBER
+        RAISE INIT_PARAM;
+    END IF;
+
+    W_SQL :=
+        ' insert into CORPTFR_IND_BK
+    select  :1,:2 , SYSDATE, INDCLIENT_CODE, INDCLIENT_FIRST_NAME, INDCLIENT_LAST_NAME, INDCLIENT_SUR_NAME, INDCLIENT_MIDDLE_NAME, INDCLIENT_WKSEC_CODE, INDCLIENT_FATHER_NAME, INDCLIENT_BIRTH_DATE, INDCLIENT_BIRTH_PLACE_CODE, INDCLIENT_BIRTH_PLACE_NAME, INDCLIENT_SEX, INDCLIENT_MARITAL_STATUS, INDCLIENT_RELIGN_CODE, INDCLIENT_NATNL_CODE, INDCLIENT_RESIDENT_STATUS, INDCLIENT_LANG_CODE, INDCLIENT_ILLITERATE_CUST, INDCLIENT_DISABLED, INDCLIENT_FADDR_REQD, INDCLIENT_TEL_RES, INDCLIENT_TEL_OFF, INDCLIENT_TEL_OFF1, INDCLIENT_EXTN_NUM, INDCLIENT_TEL_GSM, INDCLIENT_TEL_FAX, INDCLIENT_EMAIL_ADDR1, INDCLIENT_EMAIL_ADDR2, INDCLIENT_EMPLOY_TYPE, INDCLIENT_RETIRE_PENS_FLG, INDCLIENT_RELATION_BANK_FLG, INDCLIENT_EMPLOYEE_NUM, INDCLIENT_OCCUPN_CODE, INDCLIENT_EMP_COMPANY, INDCLIENT_EMP_CMP_NAME, INDCLIENT_EMP_CMP_ADDR1, INDCLIENT_EMP_CMP_ADDR2, INDCLIENT_EMP_CMP_ADDR3, INDCLIENT_EMP_CMP_ADDR4, INDCLIENT_EMP_CMP_ADDR5, INDCLIENT_DESIG_CODE, INDCLIENT_WORK_SINCE_DATE, INDCLIENT_RETIREMENT_DATE, INDCLIENT_BC_ANNUAL_INCOME, INDCLIENT_ANNUAL_INCOME_SLAB, INDCLIENT_ACCOM_TYPE, INDCLIENT_ACCOM_OTHERS, INDCLIENT_OWNS_TWO_WHEELER, INDCLIENT_OWNS_CAR, INDCLIENT_INSUR_POLICY_INFO, INDCLIENT_DEATH_DATE, INDCLIENT_PID_INV_NUM, INDCLIENT_POVERTY_FLG, INDCLIENT_MOTHER_NAME, INDCLIENT_VISA_TYPE, INDCLIENT_VISAEXP_DATE, INDCLIENT_TERROR_INV, INDCLIENT_ACTION_DTLS1, INDCLIENT_ACTION_DTLS2, INDCLIENT_ACTION_DTLS3, INDCLIENT_ADDR_VERIF_DTLS1, INDCLIENT_ADDR_VERIF_DTLS2, INDCLIENT_RISK_SCORE, INDCLIENT_ENLSTD_SNCTN_LIST from  indclients c WHERE INDCLIENT_CODE=:3  ';
+
+    EXECUTE IMMEDIATE W_SQL
+        USING P_BRANCE_CODE, P_USER_ID, P_CLIENT_NUM;
+
+    W_SQL :=
+        ' INSERT INTO INDCLIENTSPOUSE_BKUP
+    SELECT  INDSPOUSE_CLIENT_CODE, INDSPOUSE_SL, INDSPOUSE_SPOUSE_CODE, INDSPOUSE_SPOUSE_NAME, INDSPOUSE_WEDDING_DATE FROM  INDCLIENTSPOUSE C WHERE INDSPOUSE_CLIENT_CODE=:1  ';
+
+    EXECUTE IMMEDIATE W_SQL
+        USING P_CLIENT_NUM;
+
+    W_SQL := 'DELETE FROM INDCLIENTSPOUSE WHERE INDSPOUSE_CLIENT_CODE =: 1 ';
+
+    EXECUTE IMMEDIATE W_SQL
+        USING P_CLIENT_NUM;
+
+    W_SQL :=
+        ' INSERT INTO PIDDOCS_BKUP
+    SELECT  PIDDOCS_INV_NUM, PIDDOCS_DOC_SL, PIDDOCS_PID_TYPE, PIDDOCS_DOCID_NUM, PIDDOCS_CARD_NUM, PIDDOCS_ISSUE_DATE, PIDDOCS_ISSUE_PLACE, PIDDOCS_ISSUE_AUTHORITY, PIDDOCS_ISSUE_CNTRY, PIDDOCS_EXP_DATE, PIDDOCS_SPONSOR_NAME, PIDDOCS_SPONSOR_ADDR1, PIDDOCS_SPONSOR_ADDR2, PIDDOCS_SPONSOR_ADDR3, PIDDOCS_SPONSOR_ADDR4, PIDDOCS_SPONSOR_ADDR5, PIDDOCS_FOR_ADDR_PROOF, PIDDOCS_FOR_IDENTITY_CHK, PIDDOCS_SOURCE_TABLE, PIDDOCS_SOURCE_KEY, PIDDOCS_DOC_COLLECT, PIDDOCS_DOC_VERIFIED FROM  PIDDOCS C WHERE PIDDOCS_SOURCE_KEY=:1  ';
+
+    EXECUTE IMMEDIATE W_SQL
+        USING CLIENT_CODE;
+
+    W_SQL := 'DELETE FROM PIDDOCS WHERE PIDDOCS_SOURCE_KEY =: 1 ';
+
+    EXECUTE IMMEDIATE W_SQL
+        USING CLIENT_CODE;
+
+    W_SQL :=
+        ' INSERT INTO CLDUPPID_BKUP
+    SELECT  CLPID_TYPE, CLPID_DOC_CARD_NUM, CLPID_USED_FOR_CLIENT, CLPID_USED_AT_BRANCH FROM  CLDUPPID C WHERE CLPID_USED_FOR_CLIENT=:1  ';
+
+    EXECUTE IMMEDIATE W_SQL
+        USING P_CLIENT_NUM;
+
+    W_SQL := 'DELETE FROM CLDUPPID WHERE CLPID_USED_FOR_CLIENT =: 1 ';
+
+    EXECUTE IMMEDIATE W_SQL
+        USING P_CLIENT_NUM;
+
+    W_SQL := 'DELETE FROM INDCLIENTS WHERE INDCLIENT_CODE =: 1 ';
+
+    EXECUTE IMMEDIATE W_SQL
+        USING P_CLIENT_NUM;
+
+    IF P_TIN_NUMBER IS NOT NULL
+    THEN
+        W_SQL :=
+            'UPDATE CLIENTS SET CLIENTS_PAN_GIR_NUM=:1 WHERE CLIENTS_CODE =: 2 ';
+
+        EXECUTE IMMEDIATE W_SQL
+            USING P_TIN_NUMBER, P_CLIENT_NUM;
+    END IF;
+
+    IF P_VIN_NUMBER IS NOT NULL
+    THEN
+        W_SQL :=
+            'UPDATE CLIENTS SET CLIENTS_VIN_NUM=:1 WHERE CLIENTS_CODE =: 2 ';
+
+        EXECUTE IMMEDIATE W_SQL
+            USING P_VIN_NUMBER, P_CLIENT_NUM;
+    END IF;
+
+    W_SQL :=
+        'UPDATE CLIENTS SET CLIENTS_TYPE_FLG=''C'' WHERE CLIENTS_CODE =: 1 ';
+
+    EXECUTE IMMEDIATE W_SQL
+        USING P_CLIENT_NUM;
+
+    INSERT INTO CORPCLIENTS (CORPCL_CLIENT_CODE,
+                             CORPCL_CLIENT_NAME,
+                             CORPCL_RESIDENT_STATUS,
+                             CORPCL_ORGN_QUALIFIER,
+                             CORPCL_SWIFT_CODE,
+                             CORPCL_INDUS_CODE,
+                             CORPCL_SUB_INDUS_CODE,
+                             CORPCL_NATURE_OF_BUS1,
+                             CORPCL_NATURE_OF_BUS2,
+                             CORPCL_NATURE_OF_BUS3,
+                             CORPCL_INVEST_PM_CURR,
+                             CORPCL_INVEST_PM_AMT,
+                             CORPCL_CAPITAL_CURR,
+                             CORPCL_AUTHORIZED_CAPITAL,
+                             CORPCL_ISSUED_CAPITAL,
+                             CORPCL_PAIDUP_CAPITAL,
+                             CORPCL_NETWORTH_AMT,
+                             CORPCL_INCORP_DATE,
+                             CORPCL_INCORP_CNTRY,
+                             CORPCL_REG_NUM,
+                             CORPCL_REG_DATE,
+                             CORPCL_REG_AUTHORITY,
+                             CORPCL_REG_EXPIRY_DATE,
+                             CORPCL_REG_OFF_ADDR1,
+                             CORPCL_REG_OFF_ADDR2,
+                             CORPCL_REG_OFF_ADDR3,
+                             CORPCL_REG_OFF_ADDR4,
+                             CORPCL_REG_OFF_ADDR5,
+                             CORPCL_TF_CLIENT,
+                             CORPCL_VOSTRO_EXCG_HOUSE,
+                             CORPCL_IMP_EXP_CODE,
+                             CORPCL_COM_BUS_IDENTIFIER,
+                             CORPCL_BUS_ENTITY_IDENTIFIER,
+                             CORPCL_YEARS_IN_BUSINESS,
+                             CORPCL_BC_GROSS_TURNOVER,
+                             CORPCL_EMPLOYEE_SIZE,
+                             CORPCL_NUM_OFFICES,
+                             CORPCL_SCHEDULED_BANK,
+                             CORPCL_SOVEREIGN_FLG,
+                             CORPCL_TYPE_OF_SOVEREIGN,
+                             CORPCL_CNTRY_CODE,
+                             CORPCL_CENTRAL_STATE_FLG,
+                             CORPCL_PUBLIC_SECTOR_FLG,
+                             CORPCL_PRIMARY_DLR_FLG,
+                             CORPCL_MULTILATERAL_BANK,
+                             CORPCL_CONNP_INV_NUM,
+                             CORPCL_TYPE_OF_BANK,
+                             CORPCL_TYPE_OF_COOP_BANK,
+                             CORPCL_BANK_CODE,
+                             CORPCL_WKSEC_CODE,
+                             CORPCL_BAL_SHEET_TOTAL,
+                             CORPCL_EXP_CODE)
+         VALUES (P_CLIENT_NUM,
+                 NULL,
+                 'R',
+                 NULL,
+                 NULL,
+                 '',
+                 '',
+                 NULL,
+                 NULL,
+                 NULL,
+                 'BDT',
+                 NULL,
+                 'BDT',
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 0,
+                 NULL,
+                 NULL,
+                 NULL,
+                 NULL,
+                 0,
+                 NULL);
+EXCEPTION
+    WHEN INIT_PARAM
+    THEN
+        V_ERR_MSG := 'Mandatory Fields Not Set';
+        P_ERR_MSG := V_ERR_MSG;
+    WHEN OTHERS
+    THEN
+        IF V_ERR_MSG IS NULL
+        THEN
+            P_ERR_MSG :=
+                   'Error in SP_MIG_IND_TO_CORP_CLIENT -'
+                || SUBSTR (SQLERRM, 0, 100);
+        END IF;
+        dbms_output.put_line(P_ERR_MSG);
+END SP_MIG_IND_TO_CORP_CLIENT;
+/
+
+
+GRANT EXECUTE ON SP_MIG_IND_TO_CORP_CLIENT TO RL_SBLCRS;

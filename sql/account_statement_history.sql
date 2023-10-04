@@ -1,0 +1,36 @@
+/* Formatted on 8/16/2023 1:30:36 PM (QP5 v5.388) */
+SELECT STMT_PRINT_HISTORY_BRN_CODE               BRN_CODE,
+       facno (1, STMT_PRINT_HISTORY_ACC_NUM)     ACC_NUM,
+       STMT_PRINT_HISTORY_YEAR                   HISTORY_YEAR,
+       STMT_PRINT_HISTORY_COUNT                  HISTORY_COUNT,
+       STMT_PRINT_HISTORY_MOD_DATE               HISTORY_MOD_DATE,
+       STMT_PRINT_HISTORY_LAST_ENT_BY            LAST_ENT_BY
+  FROM STMT_PRINT_HISTORY@DR
+ WHERE     STMT_PRINT_HISTORY_ENTITY_NUM = 1
+       AND STMT_PRINT_HISTORY_ACC_NUM = 12414100012103;
+
+
+
+SELECT DISTINCT TRANTIME_BRN_CODE,
+                OPRLOG_USER_ID,
+                OPRLOG_FORM_NAME,
+                OPRLOG_OPR_SL,
+                OPRLOG_IN_TIME,
+                OPRLOG_OUT_TIME,
+                OPRLOG_IP_ADDRESS,
+                TRANTIME_PURPOSE_CODE
+  FROM OPRLOG2023@DR, TRANTIME@DR
+ WHERE     TRANTIME_ENTITY_NUM = 1
+       AND OPRLOG_ENTITY_NUM = 1
+       --AND OPRLOG_BRN_CODE = TRANTIME_BRN_CODE
+       AND OPRLOG_FORM_NAME = TRANTIME_PROGRAM_ID
+       AND TRANTIME_PROGRAM_ID = 'RACST'
+     --  AND OPRLOG_BRN_CODE = 33019
+       AND OPRLOG_USER_ID IN ('43126',
+                              '46179',
+                              '43126',
+                              '42614',
+                              '42614',
+                              '43126')
+       AND TRUNC (OPRLOG_IN_TIME) = TRANTIME_TRAN_DATE
+       AND TRANTIME_PURPOSE_CODE LIKE '%13301900009637%'

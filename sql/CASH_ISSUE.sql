@@ -1,0 +1,64 @@
+--CASH_BRN_SIGN0UT RELATED
+--1. Select teller balances/cash for branch 
+SELECT * FROM CPAYTRAN CP WHERE CP.CPT_TRAN_DATE = '24-aug-2015' AND 
+CP.CPT_BRN_CODE=46193;
+SELECT * FROM TELBAL TB WHERE TB.TELBAL_BRN_CODE = 1040 FOR UPDATE ; 
+--2. Select cashier payments to and from each other 
+SELECT * 
+FROM CPAYTRAN CP 
+WHERE CP.CPT_TRAN_DATE = '01-sep-2015' AND CP.CPT_BRN_CODE=23044 
+AND CP.CPT_PAYMENT_BY_CASHIER = 38082 
+--and cp.cpt_payment_to_cashier = 38082 
+AND CP.CPT_DAY_SL = 58; 
+--casiar flag 
+SELECT * FROM CPAYTRANDTL 
+-- 
+SELECT * FROM VAULTTRAN; 
+--cash scrl report probs 
+SELECT * FROM CTRAN2015 CT WHERE CT.CT_BRN_CODE='1040' AND CT.CT_TRAN_DATE='06-sep-2017' 
+AND CT.POST_TRAN_BATCH_NUM=149 FOR UPDATE 
+--3. Select details of cashier payments for branch code 
+SELECT * 
+FROM CPAYTRANDTL CPD 
+WHERE CPD.CPTDTL_BRN_CODE = 13029 
+AND CPD.CPTDTL_TRAN_DATE = '21-sep-2015'; 
+--4. Check cash verified by branch and cashier id as on date 
+------------------ 
+--1 cash signin iniciation ctl_sttus c=o only for cash,init_flag=0 and open,cls d,by null.. CASHCTL_CLOSING_INIT_FLAG=0
+edit  CASHCTL CTL WHERE CTL.CASHCTL_BRN_CODE IN ('14019') AND 
+CTL.CASHCTL_DATE = '12-oct-2017'   ; 
+--2 teller signin row del 
+EDIT CASHPHYVRFY CPY  ---CASH PHYSICAL VERIFICATION
+WHERE  cpy.csphvrfy_brn_code = 14175 and 
+CPY.CSPHVRFY_TELLER_ID IN('23702') AND 
+CPY.CSPHVRFY_DATE_OF_VRFY = '12-oct-2017' FOR UPDATE; 
+
+--3 teller signin cash_s_out=0,sign_out_date null,tallied not change 
+edit CASHSIGNINOUT CSI WHERE CSI.CASHSIGN_BRN_CODE = 14019 AND 
+CSI.CASHSIGN_DATE = '12-oct-2017' AND CSI.CASHSIGN_USER_ID IN('24311','44829') ;
+ 
+
+--4 teller signin cashsgnpos_st=1(in) and 2 for cash singout// --backend singout 
+edit  CASHSIGNPOS CP WHERE CP.CASHSIGNPOS_USER_ID IN('24311','44829')
+AND CP.CASHSIGNPOS_DATE= '12-oct-2017'; 
+----------------- 
+--pkg_brnsignout 
+--branch singin(brn_staut=I,brn_signout null,sign out id null) o mean out 
+SELECT *FROM BRNSTATUS BRN WHERE BRN.BRNSTATUS_BRN_CODE IN ('26021') AND 
+BRN.BRNSTATUS_CURR_DATE='3-jul-2017' 
+FOR UPDATE; 
+--teller hand a balance change(tba - acnkolage -see cash cls inisian) 
+SELECT * FROM TELBAL TE WHERE TE.TELBAL_BRN_CODE=14175 AND TE.TELBAL_CT_ID=28209 FOR UPDATE 
+--vault cur val not match cur_gd_val chn 
+SELECT * FROM VAULTBAL VA WHERE VA.VAULTBAL_BRN_CODE=14175 AND VA.VAULTBAL_YEAR=2017 
+AND VA.VAULTBAL_MONTH=10 FOR UPDATE ;
+
+--after vault insert..denombal add, change in gd , de_opng_gd_loos=de_cur_gd_stocl 
+SELECT * FROM DENOMBAL DN WHERE DN.DENOMBAL_BRN_CODE=14175 
+AND DN.DENOMBAL_MONTH=10 AND DN.DENOMBAL_YEAR=2017 FOR UPDATE ;
+--- 
+UPDATE DENOMBAL DN SET DN.DENOMBAL_OPNG_SOILED_SECTIONS=0,DN.DENOMBAL_OPNG_SOILED_LOOSE=0 
+,DN.DENOMBAL_OPNG_CUT_SECTIONS=0, DN.DENOMBAL_OPNG_CUT_LOOSE=0 , DN.DENOMBAL_CUR_SOILED_STOCK=0 
+, DN.DENOMBAL_CUR_CUT_STOCK=0 , DN.DENOMBAL_CUR_GOOD_RCVD_TBA=0 , DN.DENOMBAL_CUR_SOILED_RCVD_TBA=0 
+, DN.DENOMBAL_CUR_CUT_RCVD_TBA=0 WHERE DN.DENOMBAL_BRN_CODE=16170 AND DN.DENOMBAL_YEAR='2016' 
+AND DN.DENOMBAL_MONTH=03 

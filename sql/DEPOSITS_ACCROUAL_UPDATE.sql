@@ -1,0 +1,20 @@
+BEGIN
+   FOR IDX IN (SELECT IACLINK_INTERNAL_ACNUM,
+                      RDINS_EFF_DATE,
+                      RDINS_AMT_OF_PYMT,
+                      RDINS_TWDS_INSTLMNT,
+                      RDINS_TWDS_PENAL_CHGS,
+                      RDINS_TWDS_INT
+                 FROM MIG_RDINS, iaclink
+                WHERE IACLINK_ACTUAL_ACNUM = RDINS_RD_AC_NUM)
+   LOOP
+      UPDATE RDINS
+         SET RDINS_AMT_OF_PYMT = NVL (IDX.RDINS_AMT_OF_PYMT, 0),
+             RDINS_TWDS_INSTLMNT = NVL (IDX.RDINS_TWDS_INSTLMNT, 0),
+             RDINS_TWDS_PENAL_CHGS = NVL (IDX.RDINS_TWDS_PENAL_CHGS, 0),
+             RDINS_TWDS_INT = NVL (IDX.RDINS_TWDS_INT, 0)
+       WHERE     RDINS_RD_AC_NUM = IDX.IACLINK_INTERNAL_ACNUM
+             AND RDINS_ENTD_BY = 'MIG'
+             AND RDINS_ENTITY_NUM = 1;
+   END LOOP;
+END;

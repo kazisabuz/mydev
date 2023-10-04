@@ -1,0 +1,33 @@
+/* Formatted on 26/11/2020 12:38:58 PM (QP5 v5.227.12220.39754) */
+SELECT BRANCH_GMO GMO_CODE,
+       (SELECT MBRN_NAME
+          FROM MBRN
+         WHERE MBRN_ENTITY_NUM = 1 AND MBRN_CODE = BRANCH_GMO)
+          GMO_NAME,
+       BRANCH_PO PO_CODE,
+       (SELECT MBRN_NAME
+          FROM MBRN
+         WHERE MBRN_ENTITY_NUM = 1 AND MBRN_CODE = BRANCH_PO)
+          PO_NAME,
+       (SELECT MBRN_NAME
+          FROM MBRN
+         WHERE MBRN_ENTITY_NUM = 1 AND MBRN_CODE = RES_BRANCH_CODE)
+          BRANCH_NAME,
+       TT.*
+  FROM (SELECT RES_BRANCH_CODE,
+               FACNO (1, INTERNAL_ACCOUNT_NUMBER) ACCOUNT_NO,
+               CBS_DATE,
+               REFERENCE_NO,
+               REFERENCE_DATE,
+               CREDIT REMIT_AMT,
+               INCENTIVE_AMOUNT
+          FROM RMS_RECORDS
+         WHERE     INCENTIVE_GIVEN = 1
+               AND CBS_DATE BETWEEN '01-jul-2019' AND '31-oct-2020'
+               AND STATUS = 'BATCH_AUTHORIZED'
+               AND INTERNAL_ACCOUNT_NUMBER IN
+                      (SELECT ACNTS_INTERNAL_ACNUM
+                         FROM ACNTS
+                        WHERE ACNTS_ENTITY_NUM = 1 AND ACNTS_PROD_CODE = 1020)) TT,
+       MBRN_TREE2
+ WHERE TT.RES_BRANCH_CODE = BRANCH_CODE;

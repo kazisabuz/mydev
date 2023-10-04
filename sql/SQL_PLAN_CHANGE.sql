@@ -1,0 +1,55 @@
+SELECT SQL_ID, COUNT (*)
+    FROM (SELECT DISTINCT SQL_ID, PLAN_HASH_VALUE FROM DBA_HIST_SQL_PLAN
+    WHERE SQL_ID='&SQL_ID')
+GROUP BY SQL_ID
+ORDER BY 2 DESC;
+
+
+SELECT DISTINCT PLAN_HASH_VALUE,SQL_ID  FROM DBA_HIST_SQLSTAT
+WHERE SQL_ID='&SQL_ID';
+
+
+SELECT SS.SNAP_ID,
+     SS.INSTANCE_NUMBER,
+     BEGIN_INTERVAL_TIME,
+     SQL_ID,
+     PLAN_HASH_VALUE,OPTIMIZER_COST,
+     DISK_READS_TOTAL,
+     BUFFER_GETS_TOTAL,
+     ROWS_PROCESSED_TOTAL,
+     CPU_TIME_TOTAL,
+     ELAPSED_TIME_TOTAL,
+     IOWAIT_TOTAL,
+     NVL (EXECUTIONS_DELTA, 0) EXECS,
+       (  ELAPSED_TIME_DELTA
+        / DECODE (NVL (EXECUTIONS_DELTA, 0), 0, 1, EXECUTIONS_DELTA))
+     / 1000000
+        AVG_ETIME,
+     (  BUFFER_GETS_DELTA
+      / DECODE (NVL (BUFFER_GETS_DELTA, 0), 0, 1, EXECUTIONS_DELTA))
+        AVG_LIO
+FROM DBA_HIST_SQLSTAT S, DBA_HIST_SNAPSHOT SS
+WHERE     SQL_ID = '&SQL_ID'
+     AND SS.SNAP_ID = S.SNAP_ID
+     AND SS.INSTANCE_NUMBER = S.INSTANCE_NUMBER
+     AND EXECUTIONS_DELTA > 0
+ORDER BY 1, 2, 3;
+
+
+DECLARE
+    my_plans pls_integer;
+    BEGIN
+        my_plans := DBMS_SPM.LOAD_PLANS_FROM_CURSOR_CACHE(
+        sql_id => '2qydj5kqt6ftv',
+        PLAN_HASH_VALUE =>1650662510,
+        FIXED =>'YES');
+    dbms_output.put_line('Value is '||my_plans);
+END;
+
+
+select * from dba_sql_plan_baselines;
+
+
+select * from TABLE(dbms_xplan.display_cursor('2qydj5kqt6ftv'));
+
+select * from TABLE(dbms_xplan.display_awr('cy00nd8dw9tu4'))

@@ -1,0 +1,37 @@
+-------------INTEREST RATE UPDATE----------------------- 
+       
+ BEGIN
+   FOR IDX
+      IN (SELECT T.ACCNUMBER ACCOUNT_NUMBER, T.EFFECTIVE_DATE EFF_DATE FROM ACC_TF T )
+   LOOP
+      SP_LOAN_DATA_CORRECTION (1,
+                               IDX.ACCOUNT_NUMBER,
+                               9.00,
+                               IDX.EFF_DATE);
+   END LOOP;
+END;
+
+------UPDATE TABLE LIST-----
+EDIT LNACIR;
+EDIT LNACIRHIST;
+EDIT LNACIRS;
+EDIT LNACIRSHIST;
+
+
+------------------------------
+/* Formatted on 9/20/2021 4:46:08 PM (QP5 v5.149.1003.31008) */
+SELECT ACNTS_BRN_CODE,
+       ACNTS_PROD_CODE,
+       facno (1, ACNTS_INTERNAL_ACNUM) account_no,
+       ACNTS_AC_NAME1 || ACNTS_AC_NAME2 account_name,
+       ACNTS_AC_TYPE,
+       FN_GET_LNINTRATE (1, ACNTS_INTERNAL_ACNUM) int_rate
+  FROM acnts, LNACIRS
+ WHERE     LNACIRS_INTERNAL_ACNUM = ACNTS_INTERNAL_ACNUM
+       AND ACNTS_ENTITY_NUM = 1
+       AND LNACIRS_ENTITY_NUM = 1
+       AND LNACIRS_AC_LEVEL_INT_REQD = '1'
+       AND ACNTS_CLOSURE_DATE IS NULL
+       AND ACNTS_PROD_CODE IN (2101, 2105, 2106)
+       order by ACNTS_BRN_CODE asc,ACNTS_INTERNAL_ACNUM asc;
+   

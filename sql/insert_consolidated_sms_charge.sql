@@ -1,0 +1,21 @@
+Insert into CONSOLIDATED_SMS_CHARGE
+   (CHARGE_CODE, CHARGE_FLAG)
+ Values
+   ('EXCISE', '0');
+Insert into CONSOLIDATED_SMS_CHARGE
+   (CHARGE_CODE, CHARGE_FLAG)
+ Values
+   ('Charge', '0');
+Insert into CONSOLIDATED_SMS_CHARGE
+   (CHARGE_CODE, CHARGE_FLAG)
+ Values
+   ('ATM_CHG_REC', '0');
+Insert into CONSOLIDATED_SMS_CHARGE
+   (CHARGE_CODE, CHARGE_FLAG)
+ Values
+   ('SMSCHARGE', '0');
+Insert into CONSOLIDATED_SMS_CHARGE
+   (CHARGE_CODE, CHARGE_FLAG)
+ Values
+   ('SBCAIA', '0');
+COMMIT;

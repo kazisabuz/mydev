@@ -1,0 +1,23 @@
+/* Formatted on 1/16/2023 11:51:50 AM (QP5 v5.388) */
+SELECT ACNTS_BRN_CODE,
+       ACNTS_INTERNAL_ACNUM,
+       ACNTS_PROD_CODE,
+       ACNTS_AC_TYPE,
+       ACNTS_AC_SUB_TYPE,
+       ACNTS_CLIENT_NUM,
+       IACLINK_CIF_NUMBER,
+       ACASLLDTL_CLIENT_NUM,
+       ACNTS_ENTD_BY,
+       ACNTS_ENTD_ON,
+       fn_get_ason_acbal (1,
+                          ACNTS_INTERNAL_ACNUM,
+                          'BDT',
+                          '15-NOV-2022',
+                          '15-NOV-2022')    ACBAL
+  FROM ACNTS, IACLINK, ACASLLDTL
+ WHERE     IACLINK_ENTITY_NUM = 1
+       AND IACLINK_INTERNAL_ACNUM = ACNTS_INTERNAL_ACNUM
+       AND ACNTS_ENTITY_NUM = 1
+       AND ACNTS_CLIENT_NUM <> IACLINK_CIF_NUMBER
+       AND ACNTS_BRN_CODE = 55194
+       AND ACNTS_INTERNAL_ACNUM = ACASLLDTL_INTERNAL_ACNUM

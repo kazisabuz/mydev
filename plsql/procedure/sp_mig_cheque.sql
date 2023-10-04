@@ -1,0 +1,331 @@
+CREATE OR REPLACE PROCEDURE SP_MIG_CHEQUE(P_BRANCH_CODE NUMBER,
+                                          P_ERR_MSG     OUT VARCHAR2) IS
+
+  /*
+    Author:S.Rajalakshmi
+    Date  :
+
+
+  List of  Table/s Referred
+  MIG_CHEQUE
+  MIG_STOPCHQ
+
+
+  List of Tables Updated
+  CBISS
+  STOPCHQ
+
+
+      Modification History
+      -----------------------------------------------------------------------------------------
+      Sl.            Description                                    Mod By             Mod on
+      -----------------------------------------------------------------------------------------
+    */
+
+  W_INTERNAL_NUM  NUMBER(14);
+  W_CURR_DATE     DATE;
+  W_ENTD_BY       VARCHAR2(8) := 'MIG';
+  W_SL            NUMBER(5);
+  W_FIRST         BOOLEAN;
+  W_TMP_ACNUM     VARCHAR2(25);
+  W_TMP_DT        DATE;
+  W_ENTITY_NUMBER NUMBER(3) := GET_OTN.ENTITY_NUMBER;
+
+  W_ER_CODE VARCHAR2(5);
+  W_ER_DESC VARCHAR2(1000);
+  W_SRC_KEY VARCHAR2(1000);
+  W_NULL    CHAR(1) := NULL;
+  W_SQL     VARCHAR2(4000);
+  W_CNT     NUMBER(5); --S.Karthik-NUMBER(4)-24-jan-2011-Chg
+  W_REC     NUMBER(5); --S.Karthik-NUMBER(4)-24-jan-2011-Chg
+
+  PROCEDURE POST_ERR_LOG(W_SOURCE_KEY VARCHAR2,
+                         W_START_DATE DATE,
+                         W_ERROR_CODE VARCHAR2,
+                         W_ERROR      VARCHAR2) IS
+    --   PRAGMA AUTONOMOUS_TRANSACTION;
+  BEGIN
+    INSERT INTO MIG_ERRORLOG
+      (MIG_ERR_SRC_KEY,
+       MIG_ERR_DTL_SL,
+       MIG_ERR_MIGDATE,
+       MIG_ERR_CODE,
+       MIG_ERR_DESC)
+    VALUES
+      (W_SOURCE_KEY,
+       (SELECT NVL(MAX(MIG_ERR_DTL_SL), 0) + 1
+        FROM MIG_ERRORLOG P
+        WHERE P.MIG_ERR_MIGDATE = W_START_DATE),
+       W_START_DATE,
+       W_ERROR_CODE,
+       W_ERROR);
+    COMMIT;
+
+  END POST_ERR_LOG;
+
+BEGIN
+  P_ERR_MSG := '0';
+  SELECT MN_CURR_BUSINESS_DATE INTO W_CURR_DATE FROM MAINCONT;
+
+  W_SL    := 0;
+  W_FIRST := TRUE;
+
+  FOR CDX IN (SELECT CBISS_ACNUM,
+                     CBISS_ISSUE_DATE,
+                     CBISS_ISSUE_DAY_SL,
+                     CBISS_CBTYPE_CODE,
+                     CBISS_CHQBK_SIZE,
+                     CBISS_CHQBK_PREFIX,
+                     CBISS_FROM_LEAF_NUM,
+                     CBISS_UPTO_LEAF_NUM,
+                     CBISS_SELF_TPRTY,
+                     CBISS_REM1,
+                     CBISS_CHGS_AMT,
+                     CBISS_SERVICE_TAX_AMT,
+                     CBISS_ENTD_BY,
+                     CBISS_ENTD_ON
+              FROM MIG_CHEQUE
+              ORDER BY CBISS_ACNUM, CBISS_ISSUE_DATE) LOOP
+
+    <<ERR_HAND>>
+    BEGIN
+      SELECT IACLINK.IACLINK_INTERNAL_ACNUM
+      INTO W_INTERNAL_NUM
+      FROM IACLINK
+      WHERE IACLINK.IACLINK_ENTITY_NUM = W_ENTITY_NUMBER
+      AND IACLINK.IACLINK_ACTUAL_ACNUM = CDX.CBISS_ACNUM;
+    EXCEPTION
+      WHEN NO_DATA_FOUND THEN
+        W_INTERNAL_NUM := NULL;
+    END ERR_HAND;
+
+    IF W_FIRST = TRUE
+    THEN
+      W_TMP_ACNUM := CDX.CBISS_ACNUM;
+      W_TMP_DT    := CDX.CBISS_ISSUE_DATE;
+      W_FIRST     := FALSE;
+    END IF;
+
+    IF W_TMP_ACNUM <> CDX.CBISS_ACNUM
+       OR W_TMP_DT <> CDX.CBISS_ISSUE_DATE
+    THEN
+      W_TMP_ACNUM := CDX.CBISS_ACNUM;
+      W_TMP_DT    := CDX.CBISS_ISSUE_DATE;
+      W_SL        := 1;
+    ELSE
+      W_SL := W_SL + 1;
+    END IF;
+
+    IF W_INTERNAL_NUM IS NOT NULL
+    THEN
+
+      W_SQL := ' INSERT INTO CBISS
+          (CBISS_ENTITY_NUM,CBISS_CLIENT_ACNUM,
+           CBISS_ISSUE_DATE,
+           CBISS_ISSUE_DAY_SL,
+           CBISS_CBTYPE_CODE,
+           CBISS_CHQBK_SIZE,
+           CBISS_CHQBK_PREFIX,
+           CBISS_FROM_LEAF_NUM,
+           CBISS_UPTO_LEAF_NUM,
+           CBISS_SELF_TPRTY,
+           CBISS_ISSUE_CIF_NUM,
+           CBISS_ISSUE_CIF_NAME,
+           CBISS_REM1,
+           CBISS_REM2,
+           CBISS_REM3,
+           CBISS_CHGS_AMT,
+           CBISS_SERVICE_TAX_AMT,
+           POST_TRAN_BRN,
+           POST_TRAN_DATE,
+           POST_TRAN_BATCH_NUM,
+           CBISS_REQ_BRN,
+           CBISS_REQ_DATE,
+           CBISS_REQ_DAY_SL,
+           CBISS_ENTD_BY,
+           CBISS_ENTD_ON,
+           CBISS_LAST_MOD_BY,
+           CBISS_LAST_MOD_ON,
+           CBISS_AUTH_BY,
+           CBISS_AUTH_ON,
+           CBISS_REJ_BY,
+           CBISS_REJ_ON,
+           CBISS_ISSUE_BRN)
+        VALUES
+          (:1,:2,:3,:4,:5,:6,:7,:8,:9,:10,:11,:12,:13,:14,:15,:16,:17,:18,:19,:20,:21,:22,:23,:24,:25,:26,:27,:28,:29,:30,:31,
+          :32)';
+      <<IN_CBISS>>
+      BEGIN
+        EXECUTE IMMEDIATE W_SQL
+          USING W_ENTITY_NUMBER, W_INTERNAL_NUM, CDX.CBISS_ISSUE_DATE,CDX.CBISS_ISSUE_DAY_SL,
+        CDX.CBISS_CBTYPE_CODE, CDX.CBISS_CHQBK_SIZE, CDX.CBISS_CHQBK_PREFIX, CDX.CBISS_FROM_LEAF_NUM, CDX.CBISS_UPTO_LEAF_NUM, CDX.CBISS_SELF_TPRTY, W_NULL, W_NULL, CDX.CBISS_REM1, W_NULL, 'MIGRATION', CDX.CBISS_CHGS_AMT, CDX.CBISS_SERVICE_TAX_AMT, W_NULL, W_NULL, W_NULL, W_NULL, W_NULL, W_NULL, W_ENTD_BY, W_CURR_DATE, W_NULL, W_NULL, W_ENTD_BY, W_CURR_DATE, W_NULL, W_NULL,
+        P_BRANCH_CODE;
+
+      EXCEPTION
+        WHEN OTHERS THEN
+          W_ER_CODE := 'CHQ1';
+          W_ER_DESC := 'INSERT-CBISS-CHEQUE ' || SQLERRM;
+          W_SRC_KEY := P_BRANCH_CODE || '-' || CDX.CBISS_ACNUM;
+          POST_ERR_LOG(W_SRC_KEY, W_CURR_DATE, W_ER_CODE, W_ER_DESC);
+      END IN_CBISS;
+    END IF;
+  END LOOP;
+
+  W_SL    := 0;
+  W_FIRST := TRUE;
+  FOR SDX IN (SELECT STOPCHQ_ACNUM,
+                     STOPCHQ_ENTRY_DATE,
+                     STOPCHQ_DAY_SL,
+                     STOPCHQ_CLIENT_LTR_REF_NO,
+                     STOPCHQ_CLIENT_LTR_DATE,
+                     STOPCHQ_FROM_CHQ_NUM,
+                     STOPCHQ_NUM_CHQS_STOPPED,
+                     STOPCHQ_CHQ_AMT,
+                     STOPCHQ_CHQ_DATE,
+                     STOPCHQ_CHQ_BENEF_NAME,
+                     STOPCHQ_REASON1,
+                     STOPCHQ_CHGS_CURR,
+                     STOPCHQ_CHGS_AMT,
+                     STOPCHQ_SERVICE_TAX_AMT,
+                     STOPCHQ_ENTD_BY,
+                     STOPCHQ_ENTD_ON,
+                     STOPCHQ_PREFIX
+              FROM MIG_STOPCHQ
+              ORDER BY STOPCHQ_ACNUM, STOPCHQ_ENTRY_DATE) LOOP
+
+    IF W_FIRST = TRUE
+    THEN
+      W_TMP_ACNUM := SDX.STOPCHQ_ACNUM;
+      W_TMP_DT    := SDX.STOPCHQ_ENTRY_DATE;
+      W_FIRST     := FALSE;
+    END IF;
+
+    <<ERR_HAND>>
+    BEGIN
+      SELECT IACLINK.IACLINK_INTERNAL_ACNUM
+      INTO W_INTERNAL_NUM
+      FROM IACLINK
+      WHERE IACLINK.IACLINK_ENTITY_NUM = W_ENTITY_NUMBER
+      AND IACLINK.IACLINK_ACTUAL_ACNUM = SDX.STOPCHQ_ACNUM;
+    EXCEPTION
+      WHEN NO_DATA_FOUND THEN
+        --        W_INTERNAL_NUM := NULL;
+        W_INTERNAL_NUM := 0;
+    END ERR_HAND;
+
+    IF W_INTERNAL_NUM = 0
+    THEN
+      SELECT NVL(MAX(STOPCHQ_DAY_SL), 0) + 1
+      INTO W_SL
+      FROM STOPCHQ
+      WHERE STOPCHQ_ENTITY_NUM = W_ENTITY_NUMBER
+      AND STOPCHQ.STOPCHQ_INTERNAL_AC_NUM = 0
+      AND STOPCHQ.STOPCHQ_ENTRY_DATE = SDX.STOPCHQ_ENTRY_DATE;
+    ELSIF W_TMP_ACNUM <> SDX.STOPCHQ_ACNUM
+          AND W_TMP_DT <> SDX.STOPCHQ_ENTRY_DATE
+    THEN
+      W_TMP_ACNUM := SDX.STOPCHQ_ACNUM;
+      W_TMP_DT    := SDX.STOPCHQ_ENTRY_DATE;
+      W_SL        := 1;
+    ELSE
+      W_SL := W_SL + 1;
+    END IF;
+
+    -- IF W_INTERNAL_NUM IS NOT NULL THEN
+    W_SQL := 'INSERT INTO STOPCHQ
+        (STOPCHQ_ENTITY_NUM,STOPCHQ_INTERNAL_AC_NUM,
+         STOPCHQ_ENTRY_DATE,
+         STOPCHQ_DAY_SL,
+         STOPCHQ_CLIENT_LTR_REF_NO,
+         STOPCHQ_CLIENT_LTR_DATE,
+         STOPCHQ_FROM_CHQ_NUM,
+         STOPCHQ_NUM_CHQS_STOPPED,
+         STOPCHQ_UPTO_CHQ_NUM,
+         STOPCHQ_CHQ_AMT,
+         STOPCHQ_CHQ_DATE,
+         STOPCHQ_CHQ_BENEF_NAME,
+         STOPCHQ_REASON1,
+         STOPCHQ_REASON2,
+         STOPCHQ_REASON3,
+         STOPCHQ_REVOKED_ON,
+         STOPCHQ_CHGS_CURR,
+         STOPCHQ_CHGS_AMT,
+         STOPCHQ_SERVICE_TAX_AMT,
+         POST_TRAN_BRN,
+         POST_TRAN_DATE,
+         POST_TRAN_BATCH_NUM,
+         STOPCHQ_ENTD_BY,
+         STOPCHQ_ENTD_ON,
+         STOPCHQ_LAST_MOD_BY,
+         STOPCHQ_LAST_MOD_ON,
+         STOPCHQ_AUTH_BY,
+         STOPCHQ_AUTH_ON,
+         STOPCHQ_REJ_BY,
+         STOPCHQ_REJ_ON,
+         STOPCHQ_PFX)
+      VALUES
+        (:1,:2,:3,:4,:5,:6,:7,:8,:9,:10,:11,:12,:13,:14,:15,:16,:17,:18,:19,:20,:21,:22,:23,:24,:25,:26,:27,:28,:29,:30,:31)';
+    <<IN_STOPCHQ>>
+    BEGIN
+      EXECUTE IMMEDIATE W_SQL
+        USING W_ENTITY_NUMBER, W_INTERNAL_NUM, SDX.STOPCHQ_ENTRY_DATE,  SDX.STOPCHQ_DAY_SL,
+      SDX.STOPCHQ_CLIENT_LTR_REF_NO, SDX.STOPCHQ_CLIENT_LTR_DATE, SDX.STOPCHQ_FROM_CHQ_NUM, SDX.STOPCHQ_NUM_CHQS_STOPPED, W_NULL, SDX.STOPCHQ_CHQ_AMT, SDX.STOPCHQ_CHQ_DATE, SDX.STOPCHQ_CHQ_BENEF_NAME, SDX.STOPCHQ_REASON1, W_NULL, W_NULL, W_NULL, SDX.STOPCHQ_CHGS_CURR, SDX.STOPCHQ_CHGS_AMT, SDX.STOPCHQ_SERVICE_TAX_AMT, W_NULL, W_NULL, W_NULL, W_ENTD_BY, W_CURR_DATE, W_NULL, W_NULL, W_ENTD_BY, W_CURR_DATE, W_NULL, W_NULL, SDX.STOPCHQ_PREFIX;
+    EXCEPTION
+      WHEN OTHERS THEN
+        W_ER_CODE := 'CHQ2';
+        W_ER_DESC := 'INSERT-STOPCHQ-CHEQUE ' || SQLERRM;
+        W_SRC_KEY := P_BRANCH_CODE || '-' || SDX.STOPCHQ_ACNUM;
+        POST_ERR_LOG(W_SRC_KEY, W_CURR_DATE, W_ER_CODE, W_ER_DESC);
+    END IN_STOPCHQ;
+
+  --  END IF;
+  END LOOP;
+
+  UPDATE STOPCHQ
+  SET STOPCHQ_UPTO_CHQ_NUM = STOPCHQ_FROM_CHQ_NUM +
+                             (STOPCHQ_NUM_CHQS_STOPPED - 1)
+  WHERE STOPCHQ_ENTITY_NUM = W_ENTITY_NUMBER;
+
+  FOR IDX IN (SELECT STOPCHQ_INTERNAL_AC_NUM,
+                     STOPCHQ_FROM_CHQ_NUM,
+                     STOPCHQ_NUM_CHQS_STOPPED
+              FROM STOPCHQ) LOOP
+    W_CNT := IDX.STOPCHQ_NUM_CHQS_STOPPED - 1;
+    FOR BDX IN 1 .. W_CNT LOOP
+      W_REC := 0;
+      <<ERRHAND>>
+      BEGIN
+        INSERT INTO STOPLEAF
+          (STOPLEAF_ENTITY_NUM,
+           STOPLEAF_INTERNAL_AC_NUM,
+           STOPLEAF_LEAF_NUM,
+           STOPLEAF_LEAF_TYPE)
+        VALUES
+          (W_ENTITY_NUMBER,
+           IDX.STOPCHQ_INTERNAL_AC_NUM,
+           IDX.STOPCHQ_FROM_CHQ_NUM + W_REC,
+           ' ');
+      EXCEPTION
+        WHEN OTHERS THEN
+          NULL;
+      END ERRHAND;
+      W_REC := W_REC + 1;
+    END LOOP;
+  END LOOP;
+
+  COMMIT;
+  /*
+  truncate table STOPCHQ;
+  truncate table CBISS;
+  truncate table STOPLEAF;
+  */
+EXCEPTION
+  WHEN OTHERS THEN
+    P_ERR_MSG := SQLERRM || 'MAIN';
+END SP_MIG_CHEQUE;
+
+ 
+ 
+ 
+
+/

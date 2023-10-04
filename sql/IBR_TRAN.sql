@@ -1,0 +1,25 @@
+/* Formatted on 2/5/2020 3:07:08 PM (QP5 v5.227.12220.39754) */
+SELECT DISTINCT RTMPICBRTRNLST_TEMP_SER,
+                (SELECT N.MBRN_NAME
+                   FROM MBRN N
+                  WHERE N.MBRN_CODE = RTMPICBRTRNLST_BRN_CODE)
+                   RTMPICBRTRNLST_BRN_CODE,
+                RTMPICBRTRNLST_DATE_OF_TRAN,
+                RTMPICBRTRNLST_ORIG_RESP,
+                   RTMPICBRTRNLST_GLACC_CODE
+                || '-'
+                || (SELECT e.extgl_ext_head_descn
+                      FROM extgl e
+                     WHERE e.extgl_access_code = RTMPICBRTRNLST_GLACC_CODE)
+                   RTMPIBRCBS_GLACC_CODE,
+                FACNO (1, RTMPICBRTRNLST_INTERNAL_ACNUM) ACNUM,
+                RTMPICBRTRNLST_CONTRA_BR,
+                RTMPICBRTRNLST_BATCH_NUMBER,
+                RTMPICBRTRNLST_BATCH_SL_NUM,
+                RTMPICBRTRNLST_DB_CR_FLG,
+                RTMPICBRTRNLST_CURR_CODE,
+                RTMPICBRTRNLST_AMOUNT
+  FROM RTMPICBRTRNLST R
+  ORDER
+ BY R.RTMPICBRTRNLST_DATE_OF_TRAN,R.RTMPICBRTRNLST_BATCH_NUMBER,R.RTMPICBRTRNLST_ORIG_RESP,
+RTMPIBRCBS_GLACC_CODE,ACNUM

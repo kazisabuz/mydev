@@ -1,0 +1,23 @@
+1. INSERT DATA FOR ALL BRANCH ON BRN_GL
+
+2.---UPDATE ------
+DECLARE
+   V_BRN_CODE   NUMBER;
+   V_GL_CODE    VARCHAR2 (32767);
+   V_CUR_CODE   VARCHAR2 (3);
+BEGIN
+   BEGIN
+      FOR IDX IN (  SELECT *
+                      FROM BRN_GL
+                  ORDER BY BRANCH_CODE, GL_CODE, CURRENCY)
+      LOOP
+         V_BRN_CODE := IDX.BRANCH_CODE;
+         V_GL_CODE := IDX.GL_CODE;
+         V_CUR_CODE := IDX.CURRENCY;
+
+         SP_GL_BAL_CORRECTION (V_BRN_CODE, V_GL_CODE, V_CUR_CODE);
+         COMMIT;
+      END LOOP;
+   END;
+END;
+

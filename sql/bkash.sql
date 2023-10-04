@@ -1,0 +1,46 @@
+/* Formatted on 2/5/2020 7:17:49 PM (QP5 v5.227.12220.39754) */
+;
+
+  SELECT ORGINATING_BRANCH_CODE,
+         (SELECT MBRN_NAME
+            FROM MBRN
+           WHERE MBRN_CODE = ORGINATING_BRANCH_CODE)
+            ORGINATING_BRANCH_NAME,
+         RESPONDING_BRANCH_CODE,
+         (SELECT MBRN_NAME
+            FROM MBRN
+           WHERE MBRN_CODE = RESPONDING_BRANCH_CODE)
+            RESPONDING_BRANCH_NAME,
+         TRAN_DATE,NARRATION,
+         FACNO (1, TRAN_INTERNAL_ACNUM) ACCOUNT_NO,
+         TRAN_DB_CR_FLG,
+         SUM (DR_AMT) DR_AMT,
+         SUM (CR_AMT) CR_AMT,
+         FN_GET_ASON_ACBAL (1,
+                            TRAN_INTERNAL_ACNUM,
+                            'BDT',
+                            TRAN_DATE,
+                            '05-FEB-2020')
+            DAY_WISE_BALANCE
+    FROM (SELECT TRAN_BRN_CODE ORGINATING_BRANCH_CODE,
+                 TRAN_DATE_OF_TRAN TRAN_DATE,TRAN_NARR_DTL1||TRAN_NARR_DTL2||TRAN_NARR_DTL3 NARRATION,
+                 TRAN_ACING_BRN_CODE RESPONDING_BRANCH_CODE,    --74,92,022.40
+                 TRAN_INTERNAL_ACNUM,
+                 TRAN_DB_CR_FLG,
+                 CASE WHEN TRAN_DB_CR_FLG = 'D' THEN TRAN_AMOUNT ELSE 0 END
+                    DR_AMT,
+                 CASE WHEN TRAN_DB_CR_FLG = 'C' THEN TRAN_AMOUNT ELSE 0 END
+                    CR_AMT
+            FROM TRAN2020
+           WHERE     TRAN_INTERNAL_ACNUM = 10120600014461
+                 AND TRAN_ENTITY_NUM = 1
+                 AND TRAN_AUTH_BY IS NOT NULL
+                 AND TRAN_INTERNAL_ACNUM <> 0
+                  AND TRAN_DATE_OF_TRAN <='31-JAN-2020')
+                -- AND TRAN_DATE_OF_TRAN = '1-JAN-2020')
+GROUP BY ORGINATING_BRANCH_CODE,
+         TRAN_DATE,
+         RESPONDING_BRANCH_CODE,NARRATION,
+         TRAN_INTERNAL_ACNUM,
+         TRAN_DB_CR_FLG
+ORDER BY TRAN_DATE

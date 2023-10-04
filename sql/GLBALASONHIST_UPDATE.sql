@@ -1,0 +1,56 @@
+---DATA GENERATE ----------------
+
+1. INSERT DATA FOR ALL BRANCH ON BRN_GL
+
+2.
+DECLARE
+   V_BRN_CODE   NUMBER;
+   V_GL_CODE    VARCHAR2 (32767);
+   V_CUR_CODE   VARCHAR2 (3);
+BEGIN
+   BEGIN
+      FOR IDX IN (  SELECT *
+                      FROM BRN_GL
+                  ORDER BY BRANCH_CODE, GL_CODE, CURRENCY)
+      LOOP
+         V_BRN_CODE := IDX.BRANCH_CODE;
+         V_GL_CODE := IDX.GL_CODE;
+         V_CUR_CODE := IDX.CURRENCY;
+
+         SP_GET_GL_BALANCE_DATEWISE (V_BRN_CODE, V_GL_CODE, V_CUR_CODE);
+         COMMIT;
+      END LOOP;
+   END;
+END;
+
+3.
+-----------UPDATE -----------
+BEGIN
+   FOR IDX
+      IN (  SELECT GLBALH_GLACC_CODE,
+                   GLBALH_BRN_CODE,
+                   GLBALH_CURR_CODE,
+                   GLBALH_ASON_DATE,
+                   GLBALH_AC_BAL,
+                   AC_BALANCE,
+                   BC_BALANCE,
+                   GLBALH_AC_BAL - AC_BALANCE
+              FROM GL_BALANCE, GLBALASONHIST
+             WHERE     GLBALH_ENTITY_NUM = 1
+                   AND GLBALH_GLACC_CODE = GL_CODE
+                   AND GLBALH_BRN_CODE = BRANCH_CODE
+                   AND GLBALH_CURR_CODE = CURRENCY_CODE
+                   AND GLBALH_ASON_DATE = BALANCE_DATE
+                   AND (   GLBALH_AC_BAL <> AC_BALANCE
+                        OR GLBALH_BC_BAL <> BC_BALANCE)
+          ORDER BY GLBALH_BRN_CODE, GLBALH_GLACC_CODE, GLBALH_ASON_DATE)
+   LOOP
+      UPDATE GLBALASONHIST
+         SET GLBALH_AC_BAL = IDX.AC_BALANCE, GLBALH_BC_BAL = IDX.BC_BALANCE
+       WHERE     GLBALH_ENTITY_NUM = 1
+             AND GLBALH_GLACC_CODE = IDX.GLBALH_GLACC_CODE
+             AND GLBALH_BRN_CODE = IDX.GLBALH_BRN_CODE
+             AND GLBALH_CURR_CODE = IDX.GLBALH_CURR_CODE
+             AND GLBALH_ASON_DATE = IDX.GLBALH_ASON_DATE;
+   END LOOP;
+END;
