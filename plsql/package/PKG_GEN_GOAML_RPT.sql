@@ -1,10 +1,7 @@
 /*<TOAD_FILE_CHUNK>*/
 CREATE OR REPLACE PACKAGE PKG_GEN_GOAML_RPT IS
 
-  -- Author  : SHAHRIYAR.HOSSAIN
-  -- Created : 7/24/2022 11:53:59 AM
-  -- Purpose : Generates CTR/STR GoAML Report for a month
-
+ 
 
   SBL_ENTITY_NUM        CONSTANT NUMBER(2) := 1;
 
