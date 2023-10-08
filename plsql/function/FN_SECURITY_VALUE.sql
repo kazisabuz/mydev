@@ -1,0 +1,184 @@
+CREATE OR REPLACE FUNCTION FN_SECURITY_VALUE(P_GL_CODE IN VARCHAR2,P_BRN_CODE IN NUMBER,W_EXCLUDE in varchar2)
+ RETURN NUMBER
+
+ IS
+ W_SQL VARCHAR2(10000);
+ E_USEREXCEP EXCEPTION;
+ W_ERROR_MSG  varchar2(30);
+ W_Dummy      Number;
+ SEC_AMOUNT NUMBER(18,3):=0;
+ W_NEW_SEC_NUM NUMBER(10):=0;
+ W_OLD_SEC_NUM NUMBER(10):=0;
+ TOT_SEC_AMOUNT NUMBER(18,3):=0;
+    TYPE RR_TABLEA IS RECORD(
+    TMP_ACN_ACNUMBER NUMBER(14),
+    TMP_CLIENT_CODE NUMBER(12),
+    TMP_AC_NAME VARCHAR2(50),
+    TMP_AC_PRO_CODE NUMBER(4),
+    TMP_GL_CODE VARCHAR2(15)
+    );
+    TYPE TABLEA IS TABLE OF RR_TABLEA INDEX BY PLS_INTEGER;
+    V_TEMP_TABLEA TABLEA;
+
+
+    TYPE RR_TABLEB IS RECORD(
+    TMP_LM_CLIENT_CODE NUMBER(12),
+    TMP_LM_NUM NUMBER(6),
+    TMP_LM_PRO_CODE NUMBER(4));
+    TYPE TABLEB IS TABLE OF RR_TABLEB INDEX BY PLS_INTEGER;
+    V_TEMP_TABLEB TABLEB;
+
+
+    TYPE RR_TABLEC IS RECORD(
+    TMP_SEC_NUM NUMBER(10));
+    TYPE TABLEC IS TABLE OF RR_TABLEC INDEX BY PLS_INTEGER;
+    V_TEMP_TABLEC TABLEC;
+
+
+
+  BEGIN
+
+W_SQL:='SELECT AC.ACNTS_INTERNAL_ACNUM,AC.ACNTS_CLIENT_NUM,AC.ACNTS_AC_NAME1,AC.ACNTS_PROD_CODE,AC.ACNTS_GLACC_CODE FROM ACNTS AC,PRODUCTS P,LOANACNTS LA
+WHERE AC.ACNTS_PROD_CODE=P.PRODUCT_CODE
+AND AC.ACNTS_INTERNAL_ACNUM=LA.LNACNT_INTERNAL_ACNUM
+AND P.PRODUCT_FOR_LOANS      = ''1''
+AND AC.ACNTS_CLOSURE_DATE IS NULL
+'||W_EXCLUDE||'
+AND AC.ACNTS_GLACC_CODE='||CHR(39)||P_GL_CODE||CHR(39);
+
+ IF NVL(P_BRN_CODE,0) <> 0 THEN
+ W_SQL := W_SQL||' AND AC.ACNTS_BRN_CODE = '||P_BRN_CODE;
+ END IF;
+
+EXECUTE IMMEDIATE W_SQL BULK COLLECT INTO V_TEMP_TABLEA;
+
+ if (V_TEMP_TABLEA.first is not null) then
+
+    For I In V_TEMP_TABLEA.First .. V_TEMP_TABLEA.Last Loop
+
+
+
+    W_SQL:='SELECT LT.LMTLINE_CLIENT_CODE,
+            LT.LMTLINE_NUM,LT.LMTLINE_PROD_CODE
+            FROM LIMITLINE LT
+             WHERE LT.LMTLINE_CLIENT_CODE='||V_TEMP_TABLEA(I).TMP_CLIENT_CODE||'
+             AND LT.LMTLINE_PROD_CODE='||V_TEMP_TABLEA(I).TMP_AC_PRO_CODE;
+
+              EXECUTE IMMEDIATE W_SQL BULK COLLECT INTO V_TEMP_TABLEB;
+
+               if (V_TEMP_TABLEB.first is not null) then
+
+
+                  For J In V_TEMP_TABLEB.First .. V_TEMP_TABLEB.Last Loop
+
+
+
+
+
+                   W_SQL:='SELECT SE.SECRCPT_SECURITY_NUM
+                           FROM Secrcpt SE WHERE
+                           SE.SECRCPT_CLIENT_NUM='||V_TEMP_TABLEB(J).TMP_LM_CLIENT_CODE||'
+                           AND SE.SECRCPT_SECURITY_NUM IN(
+                           SELECT SBAL.SECAGMTDBAL_SEC_NUM FROM SECASSIGNMTDBAL SBAL WHERE SBAL.SECAGMTDBAL_CLIENT_NUM='||V_TEMP_TABLEB(J).TMP_LM_CLIENT_CODE||' AND SBAL.SECAGMTDBAL_LIMIT_LINE_NUM ='||V_TEMP_TABLEB(J).TMP_LM_NUM||' )';
+                       EXECUTE IMMEDIATE W_SQL BULK COLLECT INTO V_TEMP_TABLEC;
+
+                    if (V_TEMP_TABLEC.first is not null) then
+                       SEC_AMOUNT:=0;
+
+
+
+
+
+
+
+                     For K In V_TEMP_TABLEC.First .. V_TEMP_TABLEC.Last Loop
+                      W_NEW_SEC_NUM :=V_TEMP_TABLEC(K).TMP_SEC_NUM;
+
+                      if W_OLD_SEC_NUM <> W_NEW_SEC_NUM then
+                       W_SQL:=  ' SELECT NVL(SE.SECRCPT_VALUE_OF_SECURITY,0)
+                                  FROM Secrcpt SE
+                                  WHERE SE.SECRCPT_CLIENT_NUM  ='||V_TEMP_TABLEB(J).TMP_LM_CLIENT_CODE||'
+                                  AND SE.SECRCPT_SECURITY_NUM='||V_TEMP_TABLEC(K).TMP_SEC_NUM||'
+                                  AND SE.SECRCPT_SECURITY_NUM IN
+                                  (SELECT SM.SECAGMTDTL_SEC_NUM
+                                  FROM SECASSIGNMTDTL SM
+                                  WHERE SM.SECAGMTDTL_DATE =(SELECT MAX(SD.SECAGMTDTL_DATE) FROM SECASSIGNMTDTL SD WHERE SD.SECAGMTDTL_CLIENT_NUM ='||V_TEMP_TABLEB(J).TMP_LM_CLIENT_CODE||'
+                                  AND SD.SECAGMTDTL_SEC_NUM = SM.SECAGMTDTL_SEC_NUM))';
+
+                            DBMS_OUTPUT.PUT_LINE('CLIENT CODE'||V_TEMP_TABLEB(J).TMP_LM_CLIENT_CODE);
+                            DBMS_OUTPUT.PUT_LINE('SECURITY NUM '||V_TEMP_TABLEC(K).TMP_SEC_NUM);
+                            DBMS_OUTPUT.PUT_LINE('INTERNAL AC NUMBER  '||V_TEMP_TABLEA(I).TMP_ACN_ACNUMBER);
+
+
+
+                         BEGIN
+                         EXECUTE IMMEDIATE W_SQL INTO SEC_AMOUNT;
+                         EXCEPTION
+                            WHEN NO_DATA_FOUND THEN
+                              SEC_AMOUNT:=0;
+                          END;
+                              TOT_SEC_AMOUNT:=TOT_SEC_AMOUNT+SEC_AMOUNT;
+                           ELSE
+                               SEC_AMOUNT:=0;
+                          end if;
+                          W_OLD_SEC_NUM:= W_NEW_SEC_NUM;
+                          DBMS_OUTPUT.PUT_LINE('SECURITY_VALUE  '||SEC_AMOUNT);
+                          DBMS_OUTPUT.PUT_LINE('********************  ');
+                           END LOOP;
+
+
+
+
+
+
+
+
+                    END IF;
+
+
+                  END LOOP;
+
+
+               END IF;
+
+
+
+
+
+    END LOOP;
+
+
+ END IF;
+ DBMS_OUTPUT.PUT_LINE('TOT_SEC_AMOUNT :'||TOT_SEC_AMOUNT);
+ RETURN TOT_SEC_AMOUNT;
+
+ EXCEPTION
+  WHEN NO_DATA_FOUND THEN
+      DBMS_OUTPUT.PUT_LINE('EXCEPTION');
+    WHEN E_USEREXCEP THEN
+      DBMS_OUTPUT.PUT_LINE('ERROR IN GET_ASON_GLBAL');
+
+    when OTHERS then
+    Dbms_Output.Put_Line(Sqlerrm);
+
+
+
+
+  END FN_SECURITY_VALUE;
+
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+/
