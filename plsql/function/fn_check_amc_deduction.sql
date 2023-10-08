@@ -1,0 +1,58 @@
+CREATE OR REPLACE FUNCTION FN_CHECK_AMC_DEDUCTION (P_ENTITY_NUM   IN NUMBER,
+                                                   P_AC_NUMBER    IN NUMBER,
+                                                   P_BRN_CODE     IN NUMBER,
+                                                   P_AVG_BAL      IN NUMBER,
+                                                   P_TRAN_DATE    IN DATE)
+   RETURN VARCHAR2
+IS
+   TYPE REC_CHARGE IS RECORD
+   (
+      ACNTCHGAMT_CHARGE_AMT     NUMBER (18, 3),
+      ACNTCHGAMT_AVG_BAL        NUMBER (18, 3),
+      ACNTCHGAMT_SERV_TAX_AMT   NUMBER (18, 3),
+      ACNTCHGAMT_PROCESS_DATE   DATE
+   );
+
+   T_CHARGE             REC_CHARGE;
+   W_NEW_AVG_BAL        NUMBER (18, 3);
+   W_FIRST_HALF_DAYS    NUMBER;
+   W_SECOND_HALF_DAYS   NUMBER;
+BEGIN
+   BEGIN
+      SELECT ACNTCHGAMT_CHARGE_AMT,
+             ACNTCHGAMT_AVG_BAL,
+             ACNTCHGAMT_SERV_TAX_AMT,
+             ACNTCHGAMT_PROCESS_DATE
+        INTO T_CHARGE
+        FROM ACNTCHARGEAMT
+       WHERE     ACNTCHGAMT_ENTITY_NUM = P_ENTITY_NUM
+             AND ACNTCHGAMT_INTERNAL_ACNUM = P_AC_NUMBER
+             AND ACNTCHGAMT_FIN_YEAR = TO_CHAR (P_TRAN_DATE, 'YYYY')
+             AND ACNTCHGAMT_BRN_CODE = P_BRN_CODE;
+
+      W_FIRST_HALF_DAYS :=
+         T_CHARGE.ACNTCHGAMT_PROCESS_DATE - TO_DATE ('01-JAN-2021');
+      W_SECOND_HALF_DAYS := P_TRAN_DATE - T_CHARGE.ACNTCHGAMT_PROCESS_DATE;
+
+      W_NEW_AVG_BAL :=
+         ROUND (
+              (  (T_CHARGE.ACNTCHGAMT_AVG_BAL * W_FIRST_HALF_DAYS)
+               + (P_AVG_BAL * W_SECOND_HALF_DAYS))
+            / (W_FIRST_HALF_DAYS + W_SECOND_HALF_DAYS));
+
+      IF P_AVG_BAL > 1000000 AND T_CHARGE.ACNTCHGAMT_CHARGE_AMT > 0
+      THEN
+         RETURN 'Y';
+      ELSE
+         RETURN 'N';
+      END IF;
+   EXCEPTION
+      WHEN NO_DATA_FOUND
+      THEN
+         RETURN 'Y';
+      WHEN OTHERS
+      THEN
+         RETURN 'Y';
+   END;
+END;
+/
