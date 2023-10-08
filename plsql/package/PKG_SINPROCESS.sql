@@ -5,21 +5,6 @@ CREATE OR REPLACE PACKAGE PKG_SINPROCESS IS
                             P_RUN_SIN_NO IN NUMBER DEFAULT 0);
 
   END PKG_SINPROCESS;
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
 /
 
 CREATE OR REPLACE PACKAGE BODY PKG_SINPROCESS IS

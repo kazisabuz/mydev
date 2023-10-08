@@ -1,5 +1,4 @@
 CREATE OR REPLACE PACKAGE PKG_LN_RECLASSIFY IS
-  -- created by bibhu prasad on 08-04-2013
 
   PROCEDURE IDENTIFICATION_PROCESS(P_ENTITY_NUM IN NUMBER,
                                    P_ASON_DATE  IN DATE,
